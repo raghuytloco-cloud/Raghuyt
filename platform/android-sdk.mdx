@@ -1,5 +1,5 @@
 ---
-title: "Stan Android SDK & Platform Integration Guide"
+title: "Stan Android SDK: Platform Headers and HTTP/2 Integration"
 sidebarTitle: "Android SDK"
 description: "Learn how Stan's Android app integrates with the API using OkHttp, HTTP/2, and auto-generated session and device identity headers."
 ---
@@ -15,10 +15,14 @@ Stan is a native Android application that communicates with the API over HTTP/2 
 Stan uses HTTP/2 for all API communication. When testing endpoints with curl, pass the `--http2` flag to match the transport protocol the Android client uses.
 
 ```bash
-curl --http2 \
-  --request GET \
-  --url https://api.getstan.app/v1/profile \
-  --header "authorization: Bearer <your-jwt>"
+curl --http2 -X GET \
+  -H "authorization: Bearer <your-jwt>" \
+  -H "platform: android" \
+  -H "appversion: 253" \
+  -H "accept: application/json, text/plain, */*" \
+  -H "accept-encoding: gzip" \
+  -H "user-agent: okhttp/4.12.0" \
+  "https://api.getstan.app/api/v1/users?username=<username>"
 ```
 
 HTTP/2 multiplexes requests over a single connection, which reduces latency for the rapid bursts of requests the app makes during session startup. Your integration should prefer an HTTP/2-capable client where possible.
@@ -194,10 +198,11 @@ fun buildStanRequest(jwt: String, url: String): Request {
         .header("installreferrer", "utm_source=google-play&utm_medium=organic")
         .header("accept", "application/json, text/plain, */*")
         .header("accept-encoding", "gzip")
+        .header("user-agent", "okhttp/4.12.0")
         .build()
 }
 
 val client = OkHttpClient()
-val request = buildStanRequest("<your-jwt>", "https://api.getstan.app/v1/profile")
+val request = buildStanRequest("<your-jwt>", "https://api.getstan.app/api/v1/users?username=<username>")
 val response = client.newCall(request).execute()
 ```

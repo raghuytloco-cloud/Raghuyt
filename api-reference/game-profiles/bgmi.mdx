@@ -1,5 +1,5 @@
 ---
-title: "BGMI Game Profile Integration — Stan API"
+title: "Stan API: Retrieving a User's Linked BGMI Profile ID"
 sidebarTitle: "BGMI Profile"
 description: "Access a Stan user's linked Battlegrounds Mobile India account ID. Learn how to retrieve it, when it's null, and how to use it with BGMI stat tools."
 ---
@@ -21,10 +21,20 @@ Call `GET /api/v1/users` with the player's Stan username to fetch their profile.
 
 ```bash
 curl --http2 -X GET \
+  -H "Host: api.getstan.app" \
   -H "accept: application/json, text/plain, */*" \
-  -H "authorization: Bearer <YOUR_TOKEN>" \
-  -H "countrycode: in" \
+  -H "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
+  -H "appversion: 253" \
+  -H "stallionversion: 0" \
   -H "platform: android" \
+  -H "sid: 1784387335639-45684" \
+  -H "ts: 1784387581188" \
+  -H "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
+  -H "installreferrer: utm_source=google-play&utm_medium=organic" \
+  -H "countrycode: in" \
+  -H "fingerprintid: 1784387336407.dba6a7" \
+  -H "authorization: Bearer <YOUR_TOKEN>" \
+  -H "accept-encoding: gzip" \
   -H "user-agent: okhttp/4.12.0" \
   "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
 ```

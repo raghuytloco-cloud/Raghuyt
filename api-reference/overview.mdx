@@ -1,7 +1,7 @@
 ---
-title: "Stan API Overview: Base URL, Headers & Errors"
+title: "Stan API Overview: Base URL, Required Headers, and Errors"
 sidebarTitle: "Overview"
-description: "Everything you need to start calling the Stan API — base URL, HTTP/2 support, required headers, rate limits, and the standard error format."
+description: "Everything you need to start calling the Stan API — base URL, HTTP/2 support, required request headers, and the standard JSON error format."
 ---
 
 The Stan API gives you programmatic access to the Stan platform — India's mobile social network for gamers. All resources are served over HTTPS from a single base URL, respond with JSON, and require a valid Bearer token on every request. This page walks you through the foundational concepts you need before making your first call.
@@ -28,17 +28,17 @@ Every call to the Stan API must include a Bearer token **and** the full set of p
 curl --http2 -X GET \
   -H "Host: api.getstan.app" \
   -H "accept: application/json, text/plain, */*" \
-  -H "authorization: Bearer <YOUR_TOKEN>" \
-  -H "platform: android" \
+  -H "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
   -H "appversion: 253" \
   -H "stallionversion: 0" \
+  -H "platform: android" \
   -H "sid: 1784387335639-45684" \
   -H "ts: 1784387581188" \
-  -H "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
   -H "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
-  -H "fingerprintid: 1784387336407.dba6a7" \
   -H "installreferrer: utm_source=google-play&utm_medium=organic" \
   -H "countrycode: in" \
+  -H "fingerprintid: 1784387336407.dba6a7" \
+  -H "authorization: Bearer <YOUR_TOKEN>" \
   -H "accept-encoding: gzip" \
   -H "user-agent: okhttp/4.12.0" \
   "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
@@ -47,34 +47,34 @@ curl --http2 -X GET \
 ```http HTTP
 GET /api/v1/users?username=ItzDakshbro1 HTTP/2
 Host: api.getstan.app
-Accept: application/json, text/plain, */*
-Authorization: Bearer <YOUR_TOKEN>
-Platform: android
-AppVersion: 253
-StallionVersion: 0
-SID: 1784387335639-45684
-TS: 1784387581188
-GAID: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4
-AppInstanceID: 76238ef97361a56425efb91beb0fdd57
-FingerprintID: 1784387336407.dba6a7
-InstallReferrer: utm_source=google-play&utm_medium=organic
-CountryCode: in
-Accept-Encoding: gzip
-User-Agent: okhttp/4.12.0
+accept: application/json, text/plain, */*
+gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4
+appversion: 253
+stallionversion: 0
+platform: android
+sid: 1784387335639-45684
+ts: 1784387581188
+appinstanceid: 76238ef97361a56425efb91beb0fdd57
+installreferrer: utm_source=google-play&utm_medium=organic
+countrycode: in
+fingerprintid: 1784387336407.dba6a7
+authorization: Bearer <YOUR_TOKEN>
+accept-encoding: gzip
+user-agent: okhttp/4.12.0
 ```
 
 </CodeGroup>
 
-<Tip>
-  For a full description of every platform header and how to generate values like `sid`, `ts`, and `fingerprintid`, see the [Platform Request Headers](/platform/request-headers) reference.
-</Tip>
+<Note>
+  Every request must include all 14 headers shown above. The `sid` and `ts` values are client-generated session and timestamp identifiers; `fingerprintid` is a device fingerprint. Replace the sample values with values appropriate for your client session.
+</Note>
 
 ## Authentication
 
 All endpoints require a valid Bearer JWT in the `Authorization` header. Requests without a token, or with an expired or malformed token, receive a `401 Unauthorized` response.
 
 ```http
-Authorization: Bearer <YOUR_TOKEN>
+authorization: Bearer <YOUR_TOKEN>
 ```
 
 See the [Authentication](/api-reference/authentication) page for the full token structure, lifetime, and error details.
@@ -82,14 +82,6 @@ See the [Authentication](/api-reference/authentication) page for the full token 
 ## Content Type
 
 All Stan API responses are `application/json`. You should always include `accept: application/json` (or `application/json, text/plain, */*`) in your request headers to signal the expected content type.
-
-## Rate Limiting
-
-The Stan API enforces rate limits to ensure fair usage across all clients. When you exceed a limit, the API returns `429 Too Many Requests`.
-
-<Warning>
-  If you receive a `429` response, do not retry immediately. Implement an exponential backoff strategy — wait a short interval, then double it on each subsequent failure — before resuming requests.
-</Warning>
 
 ## Error Format
 
@@ -109,12 +101,10 @@ All error responses follow a consistent JSON structure. You can rely on `statusC
 | `message`    | `string` | Human-readable description of what went wrong.   |
 | `error`      | `string` | Short error label matching the HTTP status text. |
 
-Common status codes you will encounter:
+Confirmed status codes returned by the API:
 
-| Code  | Meaning              | Typical Cause                              |
-|-------|----------------------|--------------------------------------------|
-| `200` | OK                   | Request succeeded.                         |
-| `401` | Unauthorized         | Missing, expired, or malformed JWT.        |
-| `404` | Not Found            | The requested resource or route does not exist. |
-| `429` | Too Many Requests    | Rate limit exceeded — apply backoff.       |
-| `500` | Internal Server Error | Unexpected server-side failure.           |
+| Code  | Meaning      | Typical Cause                                   |
+|-------|--------------|-------------------------------------------------|
+| `200` | OK           | Request succeeded.                              |
+| `401` | Unauthorized | Missing, expired, or malformed JWT.             |
+| `404` | Not Found    | The requested resource or route does not exist. |

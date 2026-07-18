@@ -24,7 +24,7 @@ The Stan API requires several identifying headers on every request. These header
 | `accept` | `application/json, text/plain, */*` |
 | `gaid` | Google Advertising ID of the device |
 | `appversion` | Stan app version code (integer) |
-| `stallionversion` | Internal framework version (use `0` if unknown) |
+| `stallionversion` | Stan framework version (use `0` for standard requests) |
 | `platform` | `android` or `ios` |
 | `sid` | Session ID assigned at login |
 | `ts` | Current Unix timestamp in milliseconds |
@@ -145,10 +145,7 @@ A `200 OK` response returns a JSON object representing the user's public profile
 If no account exists for the given username, the API returns a `404 Not Found` response:
 
 ```json
-{
-  "error": "user_not_found",
-  "message": "No user exists with the username 'ItzDakshbro1'."
-}
+{"statusCode": 404, "message": "User not found", "error": "Not Found"}
 ```
 
 Check that you have spelled the username correctly and that the account has not been deleted or suspended.
@@ -158,10 +155,7 @@ Check that you have spelled the username correctly and that the account has not 
 If your token is missing, malformed, or expired, the API returns a `401 Unauthorized` response:
 
 ```json
-{
-  "error": "unauthorized",
-  "message": "Invalid or expired authorization token."
-}
+{"statusCode": 401, "message": "Unauthorized", "error": "Unauthorized"}
 ```
 
 Re-authenticate through the Stan app or your auth flow to obtain a fresh JWT and retry the request.

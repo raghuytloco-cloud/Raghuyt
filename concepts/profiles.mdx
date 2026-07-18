@@ -1,10 +1,10 @@
 ---
 title: "Understanding Stan User Profiles and the Data Model"
 sidebarTitle: "Profiles"
-description: "Learn how Stan represents users — from unique identifiers and display names to avatar URLs, country codes, and linked game accounts."
+description: "Learn how Stan represents users — from unique identifiers and display names to linked game accounts, country codes, and username resolution."
 ---
 
-Every person on Stan has a profile that acts as their identity across the platform. When you look up a user, join a community, or pull in-game statistics, you are always working against this central profile object. Understanding its fields helps you build features that feel native to the Stan ecosystem — whether that is rendering a player card, resolving a username to an internal ID, or checking which games a user has linked.
+Every person on Stan has a profile that acts as their identity across the platform. When you look up a user, join a community, or pull in-game statistics, you are always working against this central profile object. Understanding its fields helps you build features that feel native to the Stan ecosystem — whether that is rendering a player card, resolving a username to a numeric ID, or checking which games a user has linked.
 
 ## Profile fields
 
@@ -14,13 +14,11 @@ A Stan profile contains the following top-level fields:
 |---|---|---|
 | `id` | integer | Globally unique numeric identifier for the Stan user |
 | `username` | string | Unique, human-readable handle (e.g. `ItzDakshbro1`) |
-| `displayName` | string | The name shown on the user's profile card |
-| `avatarUrl` | string | Absolute URL to the user's profile picture on the Stan CDN |
 | `countryCode` | string | ISO 3166-1 alpha-2 country code (e.g. `in` for India) |
 | `bgmiProfileId` | integer | Linked BGMI in-game player ID, if connected |
 | `freefireProfileId` | integer | Linked Free Fire in-game player ID, if connected |
 
-### Full profile object example
+### Profile object example
 
 The following is a representative profile response returned by the Stan API:
 
@@ -28,11 +26,9 @@ The following is a representative profile response returned by the Stan API:
 {
   "id": 32091378,
   "username": "ItzDakshbro1",
-  "displayName": "Daksh",
   "bgmiProfileId": 59704785,
   "freefireProfileId": 59704786,
-  "countryCode": "in",
-  "avatarUrl": "https://cdn.getstan.app/avatars/32091378.jpg"
+  "countryCode": "in"
 }
 ```
 
@@ -62,12 +58,8 @@ Stan exposes two distinct ways to refer to a user. Knowing when to use each one 
     The `id` field is a stable, server-assigned integer that never changes for the lifetime of the account. It is:
 
     - **Immutable** — safe to store as a permanent reference
-    - **Used internally** — appears in JWT tokens, CDN paths, and cross-service references
+    - **Embedded in tokens** — appears in the JWT payload so your backend can read it without an extra API call after token verification
     - **Not meaningful to end users** — do not expose raw numeric IDs in your UI unless you have a specific reason to
-
-    <Tip>
-      The numeric `id` is embedded directly in the user's avatar URL (`/avatars/{id}.jpg`), so you can derive the avatar path without an extra API call if you already have the ID.
-    </Tip>
   </Tab>
 </Tabs>
 

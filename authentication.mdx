@@ -78,16 +78,25 @@ Include the token in every API request using the standard HTTP `Authorization` h
 Authorization: Bearer <YOUR_TOKEN>
 ```
 
-Here's a minimal authenticated request:
+Here's an example showing the token header alongside all required companion headers:
 
 ```bash
 curl --http2 -X GET \
-  -H "authorization: Bearer <YOUR_TOKEN>" \
-  -H "platform: android" \
+  -H "Host: api.getstan.app" \
+  -H "accept: application/json, text/plain, */*" \
+  -H "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
   -H "appversion: 253" \
-  -H "ts: 1784387581188" \
+  -H "stallionversion: 0" \
+  -H "platform: android" \
   -H "sid: 1784387335639-45684" \
+  -H "ts: 1784387581188" \
+  -H "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
+  -H "installreferrer: utm_source=google-play&utm_medium=organic" \
   -H "countrycode: in" \
+  -H "fingerprintid: 1784387336407.dba6a7" \
+  -H "authorization: Bearer <YOUR_TOKEN>" \
+  -H "accept-encoding: gzip" \
+  -H "user-agent: okhttp/4.12.0" \
   "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
 ```
 
@@ -123,7 +132,7 @@ The `Authorization` header alone is not sufficient. Stan's API validates a set o
   ISO 3166-1 alpha-2 country code for the client region. Use `in` for India.
 </ParamField>
 <ParamField header="stallionversion" type="string" required>
-  Internal Stan version field. Always set to `0`.
+  Stan client version field. Always set to `0`.
 </ParamField>
 <ParamField header="installreferrer" type="string" required>
   Install attribution string from the Play Store referrer. Use `utm_source=google-play&utm_medium=organic`.

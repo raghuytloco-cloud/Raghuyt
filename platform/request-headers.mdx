@@ -1,5 +1,5 @@
 ---
-title: "Stan API Request Headers: Complete Reference"
+title: "Stan API Request Headers: Complete Developer Reference"
 sidebarTitle: "Request Headers"
 description: "Full reference for every HTTP header required by the Stan API, including format, example values, and a complete curl request example."
 ---
@@ -66,24 +66,23 @@ These are standard HTTP headers that govern content negotiation, compression, an
 The following curl command shows all required headers in a single request. Replace `<your-jwt>` with a valid Bearer token from the login endpoint.
 
 ```bash
-curl --http2 \
-  --request GET \
-  --url "https://api.getstan.app/v1/profile" \
-  --header "authorization: Bearer <your-jwt>" \
-  --header "platform: android" \
-  --header "appversion: 253" \
-  --header "stallionversion: 0" \
-  --header "sid: 1784387335639-45684" \
-  --header "ts: 1784387581188" \
-  --header "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
-  --header "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
-  --header "fingerprintid: 1784387336407.dba6a7" \
-  --header "countrycode: in" \
-  --header "installreferrer: utm_source=google-play&utm_medium=organic" \
-  --header "accept: application/json, text/plain, */*" \
-  --header "accept-encoding: gzip" \
-  --header "user-agent: okhttp/4.12.0" \
-  --header "host: api.getstan.app"
+curl --http2 -X GET \
+  -H "Host: api.getstan.app" \
+  -H "accept: application/json, text/plain, */*" \
+  -H "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
+  -H "appversion: 253" \
+  -H "stallionversion: 0" \
+  -H "platform: android" \
+  -H "sid: 1784387335639-45684" \
+  -H "ts: 1784387581188" \
+  -H "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
+  -H "installreferrer: utm_source=google-play&utm_medium=organic" \
+  -H "countrycode: in" \
+  -H "fingerprintid: 1784387336407.dba6a7" \
+  -H "authorization: Bearer <your-jwt>" \
+  -H "accept-encoding: gzip" \
+  -H "user-agent: okhttp/4.12.0" \
+  "https://api.getstan.app/api/v1/users?username=<username>"
 ```
 
 <Note>

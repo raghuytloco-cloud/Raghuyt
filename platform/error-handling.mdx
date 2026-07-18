@@ -1,5 +1,5 @@
 ---
-title: "Stan API Error Handling and Retry Strategy"
+title: "Stan API Error Handling: Status Codes and Retry Strategy"
 sidebarTitle: "Error Handling"
 description: "Understand the Stan API error response format, what each HTTP status code means, and when to retry failed requests using exponential backoff."
 ---
@@ -35,15 +35,6 @@ Both `message` and `error` are intended for debugging. Do not build application 
     **Common causes:** N/A — this is the expected response for a well-formed request.
 
     **What to do:** Read the response body and continue with normal application flow. No retry is needed.
-
-    ```json
-    // Example: a successful profile fetch returns user data directly
-    {
-      "userId": "u_abc123",
-      "username": "fragging_king",
-      "platform": "bgmi"
-    }
-    ```
   </Accordion>
 
   <Accordion title="400 Bad Request — Invalid Parameters">
@@ -59,7 +50,7 @@ Both `message` and `error` are intended for debugging. Do not build application 
     ```json
     {
       "statusCode": 400,
-      "message": "gameId must be a valid string",
+      "message": "Bad Request",
       "error": "Bad Request"
     }
     ```
@@ -132,9 +123,8 @@ Both `message` and `error` are intended for debugging. Do not build application 
     **What it means:** The Stan API encountered an unexpected condition and could not complete the request. This is not caused by anything wrong with your request.
 
     **Common causes:**
-    - A transient infrastructure or database issue on Stan's side
-    - A recently deployed change that introduced a regression
-    - An upstream service that Stan depends on is temporarily unavailable
+    - A transient server-side issue on Stan's infrastructure
+    - A temporary service disruption on Stan's side
 
     **What to do:** Retry the request using **exponential backoff** — see the [Retry Strategy](#retry-strategy) section below. If the error persists for more than a few minutes, the issue is likely on Stan's side and not recoverable by retrying.
 

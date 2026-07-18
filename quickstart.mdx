@@ -39,7 +39,7 @@ This guide gets you from zero to a live API response as fast as possible. You'll
     | `appinstanceid` | `76238ef97361a56425efb91beb0fdd57` | Unique device installation ID (hex) |
     | `fingerprintid` | `1784387336407.dba6a7` | Device fingerprint |
     | `countrycode` | `in` | ISO 3166-1 alpha-2 country code |
-    | `stallionversion` | `0` | Internal version field — always `0` |
+    | `stallionversion` | `0` | Stan client version field — always `0` |
     | `installreferrer` | `utm_source=google-play&utm_medium=organic` | Install attribution string |
 
     <Tip>
@@ -129,17 +129,14 @@ This guide gets you from zero to a live API response as fast as possible. You'll
   </Step>
 
   <Step title="Read the response">
-    A successful request returns a `200 OK` with a JSON body containing the user's public profile. Here's what the response looks like:
+    A successful request returns a `200 OK` with a JSON body containing the user's public profile. The response includes at minimum the user's Stan ID, username, and any linked game account IDs:
 
     ```json
     {
       "id": 32091378,
       "username": "ItzDakshbro1",
-      "displayName": "Daksh",
       "bgmiProfileId": 59704785,
-      "freefireProfileId": 59704786,
-      "countryCode": "in",
-      "avatarUrl": "https://cdn.getstan.app/avatars/32091378.jpg"
+      "freefireProfileId": 59704786
     }
     ```
 
@@ -149,20 +146,11 @@ This guide gets you from zero to a live API response as fast as possible. You'll
     <ResponseField name="username" type="string">
       The user's unique Stan username (case-sensitive).
     </ResponseField>
-    <ResponseField name="displayName" type="string">
-      The user's chosen display name, which may differ from their username.
-    </ResponseField>
     <ResponseField name="bgmiProfileId" type="number">
       The numeric profile ID of the user's linked BGMI account, if connected.
     </ResponseField>
     <ResponseField name="freefireProfileId" type="number">
       The numeric profile ID of the user's linked Free Fire account, if connected.
-    </ResponseField>
-    <ResponseField name="countryCode" type="string">
-      ISO 3166-1 alpha-2 country code for the user's registered region.
-    </ResponseField>
-    <ResponseField name="avatarUrl" type="string">
-      Absolute URL to the user's profile avatar image on Stan's CDN.
     </ResponseField>
 
     If your token is missing or expired, the API returns a `401` error instead:

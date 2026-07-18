@@ -25,22 +25,25 @@ The table below lists every session-related header Stan expects alongside the Be
 | `appinstanceid` | `76238ef97361a56425efb91beb0fdd57` | Unique app installation identifier (hex string) |
 | `fingerprintid` | `1784387336407.dba6a7` | Device fingerprint |
 | `countrycode` | `in` | ISO 3166-1 alpha-2 country code |
-| `stallionversion` | `0` | Internal Stan framework version |
+| `installreferrer` | `utm_source=google-play&utm_medium=organic` | Attribution string from the app install referrer |
+| `stallionversion` | `0` | Stan client framework version |
 
 A complete request using all headers looks like this:
 
-```http
-GET https://api.getstan.app/api/v1/users?username=ItzDakshbro1
-Authorization: Bearer <token>
-platform: android
-appversion: 253
-sid: 1784387335639-45684
-ts: 1784387581188
-gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4
-appinstanceid: 76238ef97361a56425efb91beb0fdd57
-fingerprintid: 1784387336407.dba6a7
-countrycode: in
-stallionversion: 0
+```bash
+curl --http2 -X GET \
+  -H "authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBUeXBlIjoic3RhbiIsImJnbWlQcm9maWxlSWQiOjU5NzA0Nzg1LCJleHAiOjE3ODU0MzQ5MzUsImZyZWVmaXJlUHJvZmlsZUlkIjo1OTcwNDc4NiwiaWF0IjoxNzgyODQyOTM1LCJpZCI6MzIwOTEzNzh9.-UjsJuhJy_be8JmimWw0OEbTZcaOLxx0uBFF7BVJM58" \
+  -H "platform: android" \
+  -H "appversion: 253" \
+  -H "sid: 1784387335639-45684" \
+  -H "ts: 1784387581188" \
+  -H "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
+  -H "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
+  -H "fingerprintid: 1784387336407.dba6a7" \
+  -H "countrycode: in" \
+  -H "installreferrer: utm_source=google-play&utm_medium=organic" \
+  -H "stallionversion: 0" \
+  "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
 ```
 
 ## Session ID (`sid`)
@@ -125,6 +128,16 @@ Stan uses three separate headers to identify the physical device and the specifi
   </Note>
 </Accordion>
 
+## Install referrer (`installreferrer`)
+
+The `installreferrer` header passes through the attribution string captured at app install time. It follows the standard Google Play referrer format and is used for analytics and campaign attribution.
+
+```
+utm_source=google-play&utm_medium=organic
+```
+
+Send the value exactly as it was captured during installation. If your integration does not correspond to a real app install, you may use the organic Play Store value shown above.
+
 ## Regional routing (`countrycode`)
 
 The `countrycode` header tells Stan's infrastructure which regional cluster should handle the request. For users in India, this value is `in`. Stan uses this header for latency optimisation and content localisation — for example, surfacing India-specific gaming content and leaderboards.
@@ -138,6 +151,6 @@ Always send the ISO 3166-1 alpha-2 code that matches the user's physical locatio
     An integer representing the Stan app build number. The server may use this to gate features or apply compatibility shims. Use the latest stable build number for direct integrations.
   </Card>
   <Card title="stallionversion" icon="wrench">
-    An internal versioning field for the Stan networking layer ("Stallion"). Set this to `0` unless Stan's developer documentation specifies otherwise.
+    A versioning field for the Stan client framework. Set this to `0` unless Stan's developer documentation specifies otherwise.
   </Card>
 </CardGroup>

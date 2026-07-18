@@ -1,5 +1,5 @@
 ---
-title: "Get User by Username — Stan API Reference"
+title: "Stan API Reference: Look Up a User Profile by Username"
 sidebarTitle: "GET /users"
 description: "Retrieve a Stan user's profile by their unique username. Returns account details including linked BGMI and Free Fire game profile IDs."
 ---
@@ -90,12 +90,12 @@ A successful request returns `200 OK` with a JSON object describing the user.
 }
 ```
 
-**404 Not Found** — No Stan account exists with the supplied `username`. Double-check spelling and case before retrying.
+**404 Not Found** — The route or resource was not found. Double-check that the `username` query parameter is present and correctly spelled.
 
 ```json
 {
   "statusCode": 404,
-  "message": "User not found",
+  "message": "Cannot GET /",
   "error": "Not Found"
 }
 ```
