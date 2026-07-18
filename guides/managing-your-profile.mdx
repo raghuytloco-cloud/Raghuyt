@@ -1,0 +1,108 @@
+---
+title: "Manage and Customize Your Stan Profile Settings"
+sidebarTitle: "Manage Profile"
+description: "Learn how to configure your Stan username, display name, avatar, privacy settings, and linked game accounts to build your gaming identity."
+---
+
+Your Stan profile is your gaming identity on the platform — it is how the community finds you, how squads recognise you, and how your in-game achievements get attributed to you. Most profile settings are managed directly inside the Stan mobile app, giving you a fast and visual way to keep your profile up to date.
+
+<Note>
+  Profile editing is primarily done through the **Stan mobile app**. Open the app, tap your avatar in the bottom navigation bar to reach your profile, then tap **Edit Profile** or the **Settings** (gear) icon to access the options described in this guide.
+</Note>
+
+## Username
+
+Your username is the unique handle you chose when you created your Stan account. It serves as your permanent identifier on the platform and is what other users enter when searching for you.
+
+**Key points:**
+
+- Usernames are **unique** — no two Stan accounts can share the same username.
+- Your username is used in the user lookup API (`GET /api/v1/users?username={username}`), so it is the primary handle for discovery and integrations.
+- Choose a username that matches your gaming identity across BGMI and Free Fire for maximum recognition.
+
+<Tip>
+  If you plan to build or use third-party tools that integrate with the Stan API, share your exact username (including capitalisation) so lookups work reliably.
+</Tip>
+
+## Display Name
+
+Your display name is the human-readable name shown on your profile card, in community rooms, squad boards, and anywhere your profile appears in feeds. Unlike your username, it does not need to be unique.
+
+- Set or update your display name in the app under **Edit Profile → Display Name**.
+- The `displayName` field in the API response always reflects your current display name.
+- You can use spaces, emoji, and mixed case — make it your own.
+
+## Profile Picture
+
+Your profile picture (avatar) is uploaded directly through the Stan app:
+
+<Steps>
+  <Step title="Open Edit Profile">
+    Tap your avatar on your profile page, then tap **Edit Profile**.
+  </Step>
+  <Step title="Tap your current avatar">
+    Tap the camera icon or your existing profile picture to open the image picker.
+  </Step>
+  <Step title="Choose or capture a photo">
+    Select a photo from your gallery or take a new one with your camera.
+  </Step>
+  <Step title="Crop and confirm">
+    Adjust the crop, then tap **Save**. Your new avatar is uploaded to the Stan CDN and the `avatarUrl` field in your profile will update to point to the new image.
+  </Step>
+</Steps>
+
+## Privacy Settings
+
+Stan's privacy controls let you decide who can view your profile and activity:
+
+- **Public** — your profile is visible to all Stan users and discoverable via username search.
+- **Friends only** — only users you have mutually connected with can view your full profile.
+- **Private** — your profile is hidden from search and visible only to you.
+
+Adjust your privacy level in **Settings → Privacy → Profile Visibility**.
+
+<Note>
+  Even on a private profile, your `username` and `displayName` may still appear in certain community contexts such as squad invites you have accepted or public posts you have made.
+</Note>
+
+## Linking and Unlinking Game Accounts
+
+Your Stan profile can hold one linked BGMI account and one linked Free Fire account. Once linked, your in-game Player IDs appear as `bgmiProfileId` and `freefireProfileId` in your profile data, enabling stats display and verified-player features.
+
+- To **link** a game account, go to **Settings → Game Accounts → Link BGMI** or **Link Free Fire**, enter your in-game Player ID, and complete the verification step. See the [Link Your Game Accounts](/guides/linking-game-accounts) guide for full instructions.
+- To **unlink** a game account, go to **Settings → Game Accounts**, tap the linked account, and choose **Unlink**. The corresponding profile ID field returns to `null`.
+
+## Country Code
+
+Your `countryCode` is a two-letter ISO country code (e.g. `in` for India) that is set automatically at registration based on your region. It is reflected in the `countryCode` field of your API profile response and is used for regional leaderboards and community matching.
+
+Country code changes are not self-service — contact Stan support if your region was set incorrectly at registration.
+
+## Accessing Your Profile Data via the API
+
+You can retrieve your own public profile at any time using the user lookup endpoint with your own username:
+
+```bash
+curl --http2 -X GET \
+  -H "accept: application/json, text/plain, */*" \
+  -H "authorization: Bearer <YOUR_TOKEN>" \
+  -H "countrycode: in" \
+  -H "platform: android" \
+  "https://api.getstan.app/api/v1/users?username=<YOUR_USERNAME>"
+```
+
+A successful response returns your full profile object:
+
+```json
+{
+  "id": 32091378,
+  "username": "ItzDakshbro1",
+  "displayName": "Daksh",
+  "bgmiProfileId": 59704785,
+  "freefireProfileId": 59704786,
+  "countryCode": "in",
+  "avatarUrl": "https://cdn.getstan.app/avatars/32091378.jpg"
+}
+```
+
+Use this call to programmatically verify that profile changes (such as linking a game account or updating your display name) have taken effect. For a full breakdown of every response field, see the [Search for Stan Users](/guides/searching-users) guide.

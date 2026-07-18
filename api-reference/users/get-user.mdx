@@ -1,0 +1,101 @@
+---
+title: "Get User by Username — Stan API Reference"
+sidebarTitle: "GET /users"
+description: "Retrieve a Stan user's profile by their unique username. Returns account details including linked BGMI and Free Fire game profile IDs."
+---
+
+The `GET /api/v1/users` endpoint lets you fetch a Stan user's public profile using their username handle. You receive core account fields — including any linked game profile IDs — in a single response, making this the starting point for most user-centric workflows.
+
+## Request
+
+**`GET https://api.getstan.app/api/v1/users`**
+
+<ParamField query="username" type="string" required>
+  The exact, case-sensitive username of the Stan account you want to look up. For example, `ItzDakshbro1`.
+</ParamField>
+
+```bash
+curl --http2 -X GET \
+  -H "Host: api.getstan.app" \
+  -H "accept: application/json, text/plain, */*" \
+  -H "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
+  -H "appversion: 253" \
+  -H "stallionversion: 0" \
+  -H "platform: android" \
+  -H "sid: 1784387335639-45684" \
+  -H "ts: 1784387581188" \
+  -H "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
+  -H "installreferrer: utm_source=google-play&utm_medium=organic" \
+  -H "countrycode: in" \
+  -H "fingerprintid: 1784387336407.dba6a7" \
+  -H "authorization: Bearer <YOUR_TOKEN>" \
+  -H "accept-encoding: gzip" \
+  -H "user-agent: okhttp/4.12.0" \
+  "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
+```
+
+## Response
+
+A successful request returns `200 OK` with a JSON object describing the user.
+
+<ResponseField name="id" type="integer">
+  The unique numeric identifier for this Stan account. Use this ID to reference the user in other API calls.
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  The user's unique username handle on Stan. Usernames are case-sensitive and must be unique across the platform.
+</ResponseField>
+
+<ResponseField name="displayName" type="string">
+  The display name the user has set on their profile. Unlike `username`, display names are not required to be unique.
+</ResponseField>
+
+<ResponseField name="bgmiProfileId" type="integer | null">
+  The user's linked Battlegrounds Mobile India (BGMI) in-game account ID. Returns `null` when the user has not connected a BGMI account.
+</ResponseField>
+
+<ResponseField name="freefireProfileId" type="integer | null">
+  The user's linked Garena Free Fire in-game account ID. Returns `null` when the user has not connected a Free Fire account.
+</ResponseField>
+
+<ResponseField name="countryCode" type="string">
+  The ISO 3166-1 alpha-2 country code associated with the user's account, for example `in` for India.
+</ResponseField>
+
+<ResponseField name="avatarUrl" type="string">
+  The fully-qualified URL of the user's avatar image hosted on Stan's CDN.
+</ResponseField>
+
+```json
+{
+  "id": 32091378,
+  "username": "ItzDakshbro1",
+  "displayName": "Daksh",
+  "bgmiProfileId": 59704785,
+  "freefireProfileId": 59704786,
+  "countryCode": "in",
+  "avatarUrl": "https://cdn.getstan.app/avatars/32091378.jpg"
+}
+```
+
+## Error Responses
+
+**401 Unauthorized** — Your `authorization` header is missing or your Bearer token is invalid or expired.
+
+```json
+{
+  "statusCode": 401,
+  "message": "Unauthorized",
+  "error": "Unauthorized"
+}
+```
+
+**404 Not Found** — No Stan account exists with the supplied `username`. Double-check spelling and case before retrying.
+
+```json
+{
+  "statusCode": 404,
+  "message": "User not found",
+  "error": "Not Found"
+}
+```

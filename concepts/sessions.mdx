@@ -1,0 +1,143 @@
+---
+title: "Stan API Sessions, Device Identity, and Request Headers"
+sidebarTitle: "Sessions"
+description: "Understand how Stan tracks sessions and device identity across requests, and which headers you must supply when integrating directly with the API."
+---
+
+Stan's API is not purely stateless. Beyond the Bearer token that authenticates a user, every request carries a set of session and device headers that the platform uses for session continuity, regional routing, analytics, and fraud detection. When you use the Stan Android app these headers are generated and managed for you automatically. If you are integrating directly with the API — for example in a server-side integration or a custom client — you need to understand what each header means and supply valid values yourself.
+
+<Note>
+  All session and device headers described on this page are automatically managed by the Stan Android app. If you are integrating directly with the Stan API, you are responsible for generating and supplying valid values for every required header on each request.
+</Note>
+
+## Required headers at a glance
+
+The table below lists every session-related header Stan expects alongside the Bearer token:
+
+| Header | Example value | Description |
+|---|---|---|
+| `authorization` | `Bearer eyJ...` | Signed JWT identifying the authenticated user |
+| `platform` | `android` | Client platform |
+| `appversion` | `253` | Integer build version of the Stan app |
+| `sid` | `1784387335639-45684` | Session identifier (see format below) |
+| `ts` | `1784387581188` | Current Unix timestamp in milliseconds |
+| `gaid` | `9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4` | Google Advertising ID (UUID v4) |
+| `appinstanceid` | `76238ef97361a56425efb91beb0fdd57` | Unique app installation identifier (hex string) |
+| `fingerprintid` | `1784387336407.dba6a7` | Device fingerprint |
+| `countrycode` | `in` | ISO 3166-1 alpha-2 country code |
+| `stallionversion` | `0` | Internal Stan framework version |
+
+A complete request using all headers looks like this:
+
+```http
+GET https://api.getstan.app/api/v1/users?username=ItzDakshbro1
+Authorization: Bearer <token>
+platform: android
+appversion: 253
+sid: 1784387335639-45684
+ts: 1784387581188
+gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4
+appinstanceid: 76238ef97361a56425efb91beb0fdd57
+fingerprintid: 1784387336407.dba6a7
+countrycode: in
+stallionversion: 0
+```
+
+## Session ID (`sid`)
+
+The `sid` header carries a session identifier that ties a sequence of requests together into a logical session.
+
+**Format:** `<unix-timestamp-ms>-<random-integer>`
+
+```
+1784387335639-45684
+└─────────────┘ └───┘
+  Session start    Random suffix
+  (Unix ms)
+```
+
+You generate a session ID once at the start of a session by recording the current Unix timestamp in milliseconds and appending a hyphen followed by a random integer. You then reuse the same `sid` value for all requests within that session. Starting a new session — for example after the user logs out and back in — means generating a new `sid`.
+
+<Tip>
+  Choose a random suffix that is at least four digits long to reduce the chance of collision across concurrent sessions on the same device. The Stan app uses a five-digit suffix.
+</Tip>
+
+## Timestamp (`ts`)
+
+The `ts` header must be set to the **current** Unix timestamp in milliseconds at the moment you send each request. Unlike `sid`, you do not reuse a single timestamp — every request gets a fresh value.
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```js
+    const ts = Date.now().toString();
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    import time
+    ts = str(int(time.time() * 1000))
+    ```
+  </Tab>
+  <Tab title="Kotlin">
+    ```kotlin
+    val ts = System.currentTimeMillis().toString()
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Requests with a `ts` value that differs significantly from the server's clock may be rejected. Keep your system clock synchronised and always compute `ts` immediately before sending the request.
+</Warning>
+
+## Device and installation identifiers
+
+Stan uses three separate headers to identify the physical device and the specific app installation making a request.
+
+<Accordion title="appinstanceid — app installation identifier">
+  A hex string that uniquely identifies a single installation of the Stan app on a device. It is generated once when the app is first installed and persists until the app is uninstalled or its data is cleared.
+
+  ```
+  76238ef97361a56425efb91beb0fdd57
+  ```
+
+  If you are building a custom integration, generate a random 128-bit value encoded as a lowercase hex string and reuse it for the lifetime of your integration's "installation".
+</Accordion>
+
+<Accordion title="fingerprintid — device fingerprint">
+  A dot-separated string combining a timestamp (milliseconds since epoch at first launch) and a short random hex token. It characterises the device across sessions.
+
+  ```
+  1784387336407.dba6a7
+  └─────────────┘ └────┘
+  First-launch ms  Hex token
+  ```
+</Accordion>
+
+<Accordion title="gaid — Google Advertising ID">
+  A standard UUID v4 that Android exposes to apps for advertising and analytics attribution. On a real device this value comes from the Google Play Services API. It can be reset by the user at any time in device settings.
+
+  ```
+  9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4
+  ```
+
+  <Note>
+    If you are running a server-side integration that does not correspond to a real Android device, use a stable UUID v4 that you generate once and persist alongside your `appinstanceid`.
+  </Note>
+</Accordion>
+
+## Regional routing (`countrycode`)
+
+The `countrycode` header tells Stan's infrastructure which regional cluster should handle the request. For users in India, this value is `in`. Stan uses this header for latency optimisation and content localisation — for example, surfacing India-specific gaming content and leaderboards.
+
+Always send the ISO 3166-1 alpha-2 code that matches the user's physical location. Do not hardcode `in` for users outside India.
+
+## Version headers (`appversion`, `stallionversion`)
+
+<CardGroup cols={2}>
+  <Card title="appversion" icon="code-branch">
+    An integer representing the Stan app build number. The server may use this to gate features or apply compatibility shims. Use the latest stable build number for direct integrations.
+  </Card>
+  <Card title="stallionversion" icon="wrench">
+    An internal versioning field for the Stan networking layer ("Stallion"). Set this to `0` unless Stan's developer documentation specifies otherwise.
+  </Card>
+</CardGroup>

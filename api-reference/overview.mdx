@@ -1,0 +1,120 @@
+---
+title: "Stan API Overview: Base URL, Headers & Errors"
+sidebarTitle: "Overview"
+description: "Everything you need to start calling the Stan API — base URL, HTTP/2 support, required headers, rate limits, and the standard error format."
+---
+
+The Stan API gives you programmatic access to the Stan platform — India's mobile social network for gamers. All resources are served over HTTPS from a single base URL, respond with JSON, and require a valid Bearer token on every request. This page walks you through the foundational concepts you need before making your first call.
+
+## Base URL
+
+Every request targets the same origin. The current version prefix is `/api/v1/`.
+
+```text
+https://api.getstan.app/api/v1
+```
+
+<Note>
+  The Stan API fully supports HTTP/2. Clients that negotiate HTTP/2 (e.g. `okhttp/4.12.0` with the `--http2` flag) benefit from multiplexing and reduced latency. HTTP/1.1 clients work too — no special handling is required on your end.
+</Note>
+
+## Minimal Request Template
+
+Every call to the Stan API must include a Bearer token **and** the full set of platform-identity headers. The example below shows the minimal shape of an authenticated request.
+
+<CodeGroup>
+
+```bash cURL
+curl --http2 -X GET \
+  -H "Host: api.getstan.app" \
+  -H "accept: application/json, text/plain, */*" \
+  -H "authorization: Bearer <YOUR_TOKEN>" \
+  -H "platform: android" \
+  -H "appversion: 253" \
+  -H "stallionversion: 0" \
+  -H "sid: 1784387335639-45684" \
+  -H "ts: 1784387581188" \
+  -H "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
+  -H "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
+  -H "fingerprintid: 1784387336407.dba6a7" \
+  -H "installreferrer: utm_source=google-play&utm_medium=organic" \
+  -H "countrycode: in" \
+  -H "accept-encoding: gzip" \
+  -H "user-agent: okhttp/4.12.0" \
+  "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
+```
+
+```http HTTP
+GET /api/v1/users?username=ItzDakshbro1 HTTP/2
+Host: api.getstan.app
+Accept: application/json, text/plain, */*
+Authorization: Bearer <YOUR_TOKEN>
+Platform: android
+AppVersion: 253
+StallionVersion: 0
+SID: 1784387335639-45684
+TS: 1784387581188
+GAID: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4
+AppInstanceID: 76238ef97361a56425efb91beb0fdd57
+FingerprintID: 1784387336407.dba6a7
+InstallReferrer: utm_source=google-play&utm_medium=organic
+CountryCode: in
+Accept-Encoding: gzip
+User-Agent: okhttp/4.12.0
+```
+
+</CodeGroup>
+
+<Tip>
+  For a full description of every platform header and how to generate values like `sid`, `ts`, and `fingerprintid`, see the [Platform Request Headers](/platform/request-headers) reference.
+</Tip>
+
+## Authentication
+
+All endpoints require a valid Bearer JWT in the `Authorization` header. Requests without a token, or with an expired or malformed token, receive a `401 Unauthorized` response.
+
+```http
+Authorization: Bearer <YOUR_TOKEN>
+```
+
+See the [Authentication](/api-reference/authentication) page for the full token structure, lifetime, and error details.
+
+## Content Type
+
+All Stan API responses are `application/json`. You should always include `accept: application/json` (or `application/json, text/plain, */*`) in your request headers to signal the expected content type.
+
+## Rate Limiting
+
+The Stan API enforces rate limits to ensure fair usage across all clients. When you exceed a limit, the API returns `429 Too Many Requests`.
+
+<Warning>
+  If you receive a `429` response, do not retry immediately. Implement an exponential backoff strategy — wait a short interval, then double it on each subsequent failure — before resuming requests.
+</Warning>
+
+## Error Format
+
+All error responses follow a consistent JSON structure. You can rely on `statusCode` for programmatic branching and `message` for human-readable context.
+
+```json
+{
+  "statusCode": 404,
+  "message": "Cannot GET /",
+  "error": "Not Found"
+}
+```
+
+| Field        | Type     | Description                                      |
+|--------------|----------|--------------------------------------------------|
+| `statusCode` | `number` | Standard HTTP status code (e.g. `401`, `404`).   |
+| `message`    | `string` | Human-readable description of what went wrong.   |
+| `error`      | `string` | Short error label matching the HTTP status text. |
+
+Common status codes you will encounter:
+
+| Code  | Meaning              | Typical Cause                              |
+|-------|----------------------|--------------------------------------------|
+| `200` | OK                   | Request succeeded.                         |
+| `401` | Unauthorized         | Missing, expired, or malformed JWT.        |
+| `404` | Not Found            | The requested resource or route does not exist. |
+| `429` | Too Many Requests    | Rate limit exceeded — apply backoff.       |
+| `500` | Internal Server Error | Unexpected server-side failure.           |

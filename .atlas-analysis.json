@@ -1,13 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "Stan",
+  "projectType": "saas",
+  "projectName": "Stan",
+  "projectDescription": "Stan is a mobile social platform for gamers in India, letting users build profiles, connect game accounts (BGMI and Free Fire), and engage with a gaming community.",
   "theme": "luma",
-  "colors": {
-    "primary": "#6C3CE1",
-    "light": "#9B6EFF",
-    "dark": "#4A1FA8"
-  },
-  "favicon": "/favicon.svg",
+  "primaryColor": "#6C3CE1",
+  "lightColor": "#9B6EFF",
+  "darkColor": "#4A1FA8",
   "navigation": {
     "tabs": [
       {
@@ -75,16 +73,19 @@
       }
     ]
   },
-  "navbar": {
-    "primary": {
-      "type": "button",
-      "label": "Download Stan",
-      "href": "https://getstan.app"
-    }
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/getstan"
-    }
-  }
+  "keyFeatures": [
+    "Gaming social profiles for BGMI and Free Fire players",
+    "Username-based user lookup and discovery",
+    "JWT-based authentication with session management",
+    "Android-native mobile platform",
+    "Linked game account statistics and profiles",
+    "Community and fan engagement for Indian gamers"
+  ],
+  "publicApiSurface": [
+    "GET /api/v1/users?username={username}",
+    "Bearer token authentication via Authorization header",
+    "Platform headers: platform, appversion, sid, ts, gaid, fingerprintid",
+    "countrycode header for regional routing",
+    "appinstanceid for device-level session tracking"
+  ]
 }

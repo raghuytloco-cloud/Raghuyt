@@ -1,0 +1,50 @@
+---
+title: "Introduction to Stan: Gaming Social Platform for India"
+sidebarTitle: "Introduction"
+description: "Get to know Stan — a mobile-first social platform built for Indian gamers — and understand what the Stan API lets you access and build."
+---
+
+Stan is a mobile-first social platform built specifically for gamers in India. It gives players a dedicated space to build their gaming identity, connect their BGMI (Battlegrounds Mobile India) and Free Fire accounts, and engage with a community of like-minded players. If you're a developer, the Stan API is your gateway to that ecosystem — letting you read public gamer profiles and linked game account data programmatically.
+
+## What is Stan?
+
+Stan brings together the fragmented world of Indian mobile gaming into a single social layer. Players sign up, create a profile, and link their game accounts so that their in-game identity is tied to a single, shareable Stan username. The platform currently supports two major titles:
+
+- **BGMI (Battlegrounds Mobile India)** — India's most popular mobile battle royale
+- **Free Fire** — Garena's widely played battle royale title
+
+Every Stan user has a numeric `id`, a unique `username`, and optionally linked `bgmiProfileId` and `freefireProfileId` values that map directly to their in-game accounts.
+
+## What can you do with the API?
+
+The Stan API is a REST API served over HTTPS from `https://api.getstan.app`. With it, you can:
+
+- **Look up users by username** — Retrieve a player's public profile, including their display name, avatar, country, and linked game profile IDs.
+- **Access linked game identities** — Get the BGMI and Free Fire profile IDs associated with a Stan account, enabling cross-platform stat lookups.
+- **Power community tooling** — Build Discord bots, tournament registration flows, leaderboards, or any tool that needs to identify and verify Indian mobile gamers.
+
+<Note>
+  The Stan API currently provides read access to public profile data. Write operations (posting content, following users, etc.) are not exposed through the public API.
+</Note>
+
+## How authentication works
+
+Every API request must include a valid Bearer JWT token in the `Authorization` header. You obtain this token by logging into the Stan mobile app — there is no web-based OAuth flow. Once you have a token, you include it alongside a set of required companion headers (such as `platform`, `appversion`, `ts`, and `sid`) on every request.
+
+Tokens are valid for approximately 30 days. When a token expires, the API returns a `401 Unauthorized` response and you'll need to log in through the app again to obtain a fresh token.
+
+<Tip>
+  See the [Authentication guide](/authentication) for a full breakdown of the JWT payload, every required header, and how to handle token expiry gracefully.
+</Tip>
+
+## Base URL
+
+All API endpoints are relative to the following base URL:
+
+```text
+https://api.getstan.app
+```
+
+## Ready to make your first call?
+
+The [Quickstart guide](/quickstart) walks you through obtaining a token, assembling the required headers, and making a live user-lookup request — with a full working curl example you can run immediately.

@@ -1,0 +1,207 @@
+---
+title: "Authentication: Bearer JWT Tokens and Required Headers"
+sidebarTitle: "Authentication"
+description: "Learn how Stan's JWT-based auth works, how to obtain and decode your token, and which companion headers every authenticated request must include."
+---
+
+Every request to the Stan API must be authenticated. Stan uses Bearer JSON Web Tokens (JWTs) — you obtain a token by logging into the Stan mobile app, then include it in the `Authorization` header of every request alongside a set of required companion headers. This page explains the full authentication model so you can integrate confidently.
+
+## How Stan authentication works
+
+Stan's API does not expose a traditional OAuth flow or a developer portal where you can generate API keys. Instead, authentication is tied to the Stan mobile app:
+
+1. You log in to the Stan app on an Android device.
+2. The app receives a signed JWT from Stan's authentication server.
+3. You capture that JWT from outgoing traffic using a proxy or inspection tool.
+4. You include the JWT as a Bearer token on every subsequent API request.
+
+<Note>
+  Tokens are obtained exclusively through the Stan mobile app login flow — there is no web-based OAuth, no client credentials grant, and no developer key issuance portal. You must use the app to get a token.
+</Note>
+
+## Obtaining a token
+
+To capture your Bearer token:
+
+1. Install the Stan app from the Google Play Store on an Android device or emulator.
+2. Log in with your Stan account credentials.
+3. Intercept outgoing HTTPS traffic using a tool such as [HTTP Toolkit](https://httptoolkit.com), Charles Proxy, or mitmproxy.
+4. Look for requests to `api.getstan.app` — the `Authorization` header value is your Bearer token.
+
+The raw header value looks like this:
+
+```text
+Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBUeXBlIjoic3RhbiIsImJnbWlQcm9maWxlSWQiOjU5NzA0Nzg1LCJmcmVlZmlyZVByb2ZpbGVJZCI6NTk3MDQ3ODYsImV4cCI6MTc4NTQzNDkzNSwiaWF0IjoxNzgyODQyOTM1LCJpZCI6MzIwOTEzNzh9.SIGNATURE
+```
+
+Store this value securely — it grants access to the API on behalf of your Stan account.
+
+## Token structure
+
+Stan JWTs are standard Base64-encoded tokens. The decoded payload contains the following fields:
+
+```json
+{
+  "appType": "stan",
+  "bgmiProfileId": 59704785,
+  "freefireProfileId": 59704786,
+  "exp": 1785434935,
+  "iat": 1782842935,
+  "id": 32091378
+}
+```
+
+<ResponseField name="id" type="number">
+  Your Stan account's unique numeric user ID. This is the canonical identifier for your account across the Stan platform.
+</ResponseField>
+<ResponseField name="appType" type="string">
+  Always `"stan"`. Identifies the token as belonging to the Stan consumer app.
+</ResponseField>
+<ResponseField name="bgmiProfileId" type="number">
+  The numeric profile ID of the BGMI account linked to your Stan profile. Present only if you have connected a BGMI account.
+</ResponseField>
+<ResponseField name="freefireProfileId" type="number">
+  The numeric profile ID of the Free Fire account linked to your Stan profile. Present only if you have connected a Free Fire account.
+</ResponseField>
+<ResponseField name="iat" type="number">
+  **Issued At** — Unix timestamp (seconds) indicating when the token was issued.
+</ResponseField>
+<ResponseField name="exp" type="number">
+  **Expiry** — Unix timestamp (seconds) after which the token is no longer valid. Tokens are valid for approximately 30 days from issuance.
+</ResponseField>
+
+## Passing the token in requests
+
+Include the token in every API request using the standard HTTP `Authorization` header with the `Bearer` scheme:
+
+```text
+Authorization: Bearer <YOUR_TOKEN>
+```
+
+Here's a minimal authenticated request:
+
+```bash
+curl --http2 -X GET \
+  -H "authorization: Bearer <YOUR_TOKEN>" \
+  -H "platform: android" \
+  -H "appversion: 253" \
+  -H "ts: 1784387581188" \
+  -H "sid: 1784387335639-45684" \
+  -H "countrycode: in" \
+  "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
+```
+
+## Required companion headers
+
+The `Authorization` header alone is not sufficient. Stan's API validates a set of companion headers that describe the originating client. You must include all of the following on every request:
+
+<ParamField header="authorization" type="string" required>
+  Bearer JWT token. Format: `Bearer <token>`.
+</ParamField>
+<ParamField header="platform" type="string" required>
+  Client platform. Always set to `android`.
+</ParamField>
+<ParamField header="appversion" type="string" required>
+  Stan app build version number. Use `253` for the current version.
+</ParamField>
+<ParamField header="sid" type="string" required>
+  Session identifier. Format: `<unix-timestamp-ms>-<random-integer>`. Example: `1784387335639-45684`.
+</ParamField>
+<ParamField header="ts" type="string" required>
+  Current Unix timestamp in milliseconds. Regenerate this value fresh on each request.
+</ParamField>
+<ParamField header="gaid" type="string" required>
+  Google Advertising ID in UUID format. Example: `9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4`.
+</ParamField>
+<ParamField header="appinstanceid" type="string" required>
+  Unique device installation identifier as a hex string. Example: `76238ef97361a56425efb91beb0fdd57`.
+</ParamField>
+<ParamField header="fingerprintid" type="string" required>
+  Device fingerprint value. Format: `<timestamp>.<hex>`. Example: `1784387336407.dba6a7`.
+</ParamField>
+<ParamField header="countrycode" type="string" required>
+  ISO 3166-1 alpha-2 country code for the client region. Use `in` for India.
+</ParamField>
+<ParamField header="stallionversion" type="string" required>
+  Internal Stan version field. Always set to `0`.
+</ParamField>
+<ParamField header="installreferrer" type="string" required>
+  Install attribution string from the Play Store referrer. Use `utm_source=google-play&utm_medium=organic`.
+</ParamField>
+
+## Token expiry
+
+Tokens expire approximately 30 days after they are issued, as indicated by the `exp` field in the JWT payload. You can decode the token locally (it is Base64-encoded) to check the `exp` timestamp before making a request.
+
+```python
+import base64, json
+
+token = "<YOUR_TOKEN>"
+payload_b64 = token.split(".")[1]
+# Pad to a multiple of 4 bytes
+payload_b64 += "=" * (4 - len(payload_b64) % 4)
+payload = json.loads(base64.b64decode(payload_b64))
+
+print(payload["exp"])  # Unix timestamp — compare to int(time.time())
+```
+
+<Tip>
+  Build expiry checking into your tooling so you get a clear warning when your token is nearing its `exp` date rather than discovering it through a failed request.
+</Tip>
+
+## Error responses
+
+When authentication fails, the API returns a `401 Unauthorized` response with the following JSON body:
+
+```json
+{
+  "statusCode": 401,
+  "message": "Unauthorized",
+  "error": "Unauthorized"
+}
+```
+
+Common causes of a `401` response include:
+
+- The `Authorization` header is missing from the request.
+- The token has expired (current time is past the `exp` value).
+- The token has been invalidated server-side (for example, after a password change).
+- The token value is malformed or was truncated.
+
+<Warning>
+  If you receive a `401`, log back into the Stan app to obtain a fresh token. There is no token-refresh endpoint — you must re-authenticate through the app.
+</Warning>
+
+A request to a non-existent endpoint returns a `404 Not Found`:
+
+```json
+{
+  "statusCode": 404,
+  "message": "Cannot GET /",
+  "error": "Not Found"
+}
+```
+
+## Full authenticated request example
+
+Here is a complete, production-style curl request with all required headers in place:
+
+```bash
+curl --http2 -X GET \
+  -H "Host: api.getstan.app" \
+  -H "accept: application/json, text/plain, */*" \
+  -H "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
+  -H "appversion: 253" \
+  -H "stallionversion: 0" \
+  -H "platform: android" \
+  -H "sid: 1784387335639-45684" \
+  -H "ts: 1784387581188" \
+  -H "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
+  -H "installreferrer: utm_source=google-play&utm_medium=organic" \
+  -H "countrycode: in" \
+  -H "fingerprintid: 1784387336407.dba6a7" \
+  -H "authorization: Bearer <YOUR_TOKEN>" \
+  -H "accept-encoding: gzip" \
+  -H "user-agent: okhttp/4.12.0" \
+  "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
+```

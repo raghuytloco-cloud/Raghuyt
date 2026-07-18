@@ -1,0 +1,123 @@
+---
+title: "Linking BGMI and Free Fire Game Accounts in Stan"
+sidebarTitle: "Game Accounts"
+description: "Discover how Stan links player identities across BGMI and Free Fire, where game profile IDs appear, and what you can build with them."
+---
+
+Stan is built specifically for the Indian mobile gaming community, and connecting real in-game identities is central to the platform's value. When a user links their game account, Stan associates their Stan profile with a numeric player ID from the game — making it possible to surface live stats, verify competitive credentials, and let other players find them across titles. As an API consumer, you interact with these linked identities through a pair of integer fields on the user profile object.
+
+## Supported games
+
+Stan currently supports two titles:
+
+| Game | Field name | Publisher | Platform |
+|---|---|---|---|
+| Battlegrounds Mobile India | `bgmiProfileId` | Krafton | Android / iOS |
+| Garena Free Fire | `freefireProfileId` | Garena | Android / iOS |
+
+Both games are among the most-played mobile titles in India, and Stan's user base skews heavily toward players active in one or both of them.
+
+## How game profile IDs work
+
+When a user links a game account through the Stan app, the platform stores their in-game player ID as an integer on their Stan profile. This ID is the same numeric identifier the game itself uses to uniquely identify a player inside its own systems.
+
+<Accordion title="Where game profile IDs appear">
+  Game profile IDs surface in two places in every authenticated session:
+
+  **1. The user profile response**
+
+  ```json
+  {
+    "id": 32091378,
+    "username": "ItzDakshbro1",
+    "displayName": "Daksh",
+    "bgmiProfileId": 59704785,
+    "freefireProfileId": 59704786,
+    "countryCode": "in",
+    "avatarUrl": "https://cdn.getstan.app/avatars/32091378.jpg"
+  }
+  ```
+
+  **2. The decoded JWT token payload**
+
+  ```json
+  {
+    "appType": "stan",
+    "bgmiProfileId": 59704785,
+    "freefireProfileId": 59704786,
+    "exp": 1785434935,
+    "iat": 1782842935,
+    "id": 32091378
+  }
+  ```
+
+  Having the IDs in the JWT means your backend can read a user's linked game accounts immediately after verifying their token — without making a separate call to the users endpoint.
+</Accordion>
+
+## Linked account states
+
+A Stan user can be in any of the following states with respect to game accounts:
+
+<Tabs>
+  <Tab title="Both games linked">
+    Both `bgmiProfileId` and `freefireProfileId` are non-null integers. You can query stats and display verified identity for both titles.
+
+    ```json
+    {
+      "bgmiProfileId": 59704785,
+      "freefireProfileId": 59704786
+    }
+    ```
+  </Tab>
+  <Tab title="One game linked">
+    Only one of the two fields is present or non-null. This is common for players who are active in a single title. Always check both fields independently before rendering game-specific UI.
+
+    ```json
+    {
+      "bgmiProfileId": 59704785,
+      "freefireProfileId": null
+    }
+    ```
+  </Tab>
+  <Tab title="No games linked">
+    Both fields are `null` or absent. The user has a Stan profile but has not yet connected any game account. Avoid rendering game stat components in this state.
+
+    ```json
+    {
+      "bgmiProfileId": null,
+      "freefireProfileId": null
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Never assume a game profile ID is present just because you can see one of the two fields. Always guard both fields separately before making downstream calls that depend on them.
+</Warning>
+
+## Use cases
+
+<CardGroup cols={2}>
+  <Card title="Display in-game stats" icon="chart-bar">
+    Use the game profile ID as a key to fetch match history, rank, kill/death ratio, and other statistics from game-specific APIs.
+  </Card>
+  <Card title="Verify game identity" icon="shield-check">
+    Confirm that a Stan user is the legitimate owner of a particular in-game account — useful for tournament registration and leaderboard validation.
+  </Card>
+  <Card title="Find players by game ID" icon="magnifying-glass">
+    Let users search for Stan profiles by their in-game player ID rather than their Stan username, bridging discovery across platforms.
+  </Card>
+  <Card title="Cross-title profiles" icon="trophy">
+    Build a unified competitive profile that aggregates a player's performance across both BGMI and Free Fire in a single view.
+  </Card>
+</CardGroup>
+
+<Tip>
+  Because the game profile IDs are integers, you can safely use strict equality checks (`===` in JavaScript, `==` in Python) when comparing them — no string normalisation required.
+</Tip>
+
+## Relationship to the Stan profile
+
+Game profile IDs are attributes of the Stan profile, not standalone resources. You always start with a Stan user — resolved by username or numeric `id` — and then read the game fields off that object. There is no separate endpoint to look up a Stan user directly by their BGMI or Free Fire player ID.
+
+For details on the full profile object and how to resolve usernames, see the [Profiles](/concepts/profiles) concept page.

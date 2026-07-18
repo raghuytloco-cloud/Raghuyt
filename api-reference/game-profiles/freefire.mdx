@@ -1,0 +1,73 @@
+---
+title: "Free Fire Game Profile Integration — Stan API"
+sidebarTitle: "Free Fire Profile"
+description: "Access a Stan user's linked Garena Free Fire account ID. Learn how to retrieve it, handle null values, and use it with Free Fire stat tracking tools."
+---
+
+Stan lets users link their Garena Free Fire accounts to their profiles. Once linked, the Free Fire in-game account ID is exposed through the Stan user object, giving you a verified connection between a player's Stan identity and their Free Fire identity.
+
+## Where the Free Fire Profile ID Lives
+
+The Free Fire account ID is surfaced in two places:
+
+- **User object** — the `freefireProfileId` field returned by `GET /api/v1/users`.
+- **JWT token payload** — the same integer is embedded in the authenticated user's token, so your server can read it without an extra API round-trip.
+
+`freefireProfileId` is a plain integer that maps directly to the player's unique Garena Free Fire in-game ID. No additional transformation is needed before passing it to Free Fire's own tooling.
+
+## Retrieving the Free Fire Profile ID
+
+Call `GET /api/v1/users` with the player's Stan username to fetch their profile. The `freefireProfileId` field in the response contains the linked Free Fire account ID.
+
+```bash
+curl --http2 -X GET \
+  -H "accept: application/json, text/plain, */*" \
+  -H "authorization: Bearer <YOUR_TOKEN>" \
+  -H "countrycode: in" \
+  -H "platform: android" \
+  -H "user-agent: okhttp/4.12.0" \
+  "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
+```
+
+The response highlights the `freefireProfileId` field:
+
+```json
+{
+  "id": 32091378,
+  "username": "ItzDakshbro1",
+  "displayName": "Daksh",
+  "bgmiProfileId": 59704785,
+  "freefireProfileId": 59704786,
+  "countryCode": "in",
+  "avatarUrl": "https://cdn.getstan.app/avatars/32091378.jpg"
+}
+```
+
+In this example, `59704786` is the player's Garena Free Fire in-game ID.
+
+## When freefireProfileId is null
+
+If a Stan user has not linked a Free Fire account, `freefireProfileId` returns `null`:
+
+```json
+{
+  "id": 32091378,
+  "username": "ItzDakshbro1",
+  "displayName": "Daksh",
+  "bgmiProfileId": 59704785,
+  "freefireProfileId": null,
+  "countryCode": "in",
+  "avatarUrl": "https://cdn.getstan.app/avatars/32091378.jpg"
+}
+```
+
+Always check for `null` before attempting to use the value downstream. You should prompt the user to link their Free Fire account from within the Stan app if you need this ID and it is absent.
+
+## Use Cases
+
+- **In-game identity verification** — confirm that a Stan user is the genuine owner of a specific Free Fire account before awarding prizes or granting tournament access.
+- **Stat display** — pass the `freefireProfileId` to Garena's APIs or a third-party stat tracker to fetch match history, kill stats, rank, and other in-game statistics.
+
+<Note>
+  Stan does not expose a direct Free Fire stats API. Use the `freefireProfileId` value with Garena's official APIs or third-party stat-tracking services to retrieve in-game performance data.
+</Note>

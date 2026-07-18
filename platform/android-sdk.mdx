@@ -1,0 +1,203 @@
+---
+title: "Stan Android SDK & Platform Integration Guide"
+sidebarTitle: "Android SDK"
+description: "Learn how Stan's Android app integrates with the API using OkHttp, HTTP/2, and auto-generated session and device identity headers."
+---
+
+Stan is a native Android application that communicates with the API over HTTP/2 using the [OkHttp](https://square.github.io/okhttp/) networking library (v4.12.0). Understanding how the platform layer works helps you build reliable integrations directly against the Stan API without relying on the app itself.
+
+<Note>
+  The Stan app manages all of the headers described on this page automatically for regular users. This guide is intended for developers who are building integrations directly against the Stan API and need to construct these headers manually.
+</Note>
+
+## HTTP Transport
+
+Stan uses HTTP/2 for all API communication. When testing endpoints with curl, pass the `--http2` flag to match the transport protocol the Android client uses.
+
+```bash
+curl --http2 \
+  --request GET \
+  --url https://api.getstan.app/v1/profile \
+  --header "authorization: Bearer <your-jwt>"
+```
+
+HTTP/2 multiplexes requests over a single connection, which reduces latency for the rapid bursts of requests the app makes during session startup. Your integration should prefer an HTTP/2-capable client where possible.
+
+## App Version (`appversion`)
+
+The `appversion` header identifies the Stan app build number. The API uses this value to gate features and enforce compatibility between app releases and backend behaviour.
+
+| Field | Value |
+|---|---|
+| Current version | `253` |
+| Header name | `appversion` |
+| Type | Integer (sent as string) |
+
+Always set `appversion` to the current Stan app build number. If you send an outdated version, the API may respond with unexpected errors or missing fields as the server may route your request through deprecated logic.
+
+<Tip>
+  Check the Stan app release notes on the Google Play Store to find the current build number whenever you refresh your integration.
+</Tip>
+
+## Stallion Version (`stallionversion`)
+
+The `stallionversion` header is an internal versioning field used by Stan's infrastructure. For all standard API requests, set this value to `0`.
+
+```text
+stallionversion: 0
+```
+
+You do not need to change this value under normal circumstances. It is reserved for internal Stan deployment tooling.
+
+## Session ID (`sid`)
+
+Every request must carry a `sid` (session ID) header that uniquely identifies the current user session. Stan generates this value by concatenating the current Unix timestamp in milliseconds with a random integer, separated by a hyphen.
+
+```text
+sid: <unix-timestamp-ms>-<random-integer>
+```
+
+**Example:** `1784387335639-45684`
+
+The session ID is created once when the user opens the app and remains constant for the duration of that session. You should generate a new `sid` each time your integration starts a new logical session.
+
+<Tabs>
+  <Tab title="Java">
+    ```java
+    import java.util.Random;
+
+    public class SessionIdGenerator {
+        public static String generateSid() {
+            long timestamp = System.currentTimeMillis();
+            int random = new Random().nextInt(90000) + 10000; // 5-digit random int
+            return timestamp + "-" + random;
+        }
+
+        public static void main(String[] args) {
+            System.out.println(generateSid());
+            // Example output: 1784387335639-45684
+        }
+    }
+    ```
+  </Tab>
+  <Tab title="Kotlin">
+    ```kotlin
+    import kotlin.random.Random
+
+    fun generateSid(): String {
+        val timestamp = System.currentTimeMillis()
+        val random = Random.nextInt(10000, 99999) // 5-digit random int
+        return "$timestamp-$random"
+    }
+
+    fun main() {
+        println(generateSid())
+        // Example output: 1784387335639-45684
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## App Instance ID (`appinstanceid`)
+
+The `appinstanceid` is a 32-character lowercase hexadecimal string that uniquely identifies a single installation of the Stan app on a device. It is generated once when the app is first installed and persists across sessions, app updates, and reboots — it only changes if the app is uninstalled and reinstalled.
+
+```text
+appinstanceid: 76238ef97361a56425efb91beb0fdd57
+```
+
+For integrations, generate this value once and store it durably (for example, in `SharedPreferences` or your local database). Reusing the same `appinstanceid` across requests is the correct behaviour and mirrors what the app does.
+
+<Tabs>
+  <Tab title="Java">
+    ```java
+    import java.util.UUID;
+
+    public class AppInstanceId {
+        public static String generate() {
+            return UUID.randomUUID().toString().replace("-", "");
+        }
+    }
+    // Example output: 76238ef97361a56425efb91beb0fdd57
+    ```
+  </Tab>
+  <Tab title="Kotlin">
+    ```kotlin
+    import java.util.UUID
+
+    fun generateAppInstanceId(): String =
+        UUID.randomUUID().toString().replace("-", "")
+
+    // Example output: 76238ef97361a56425efb91beb0fdd57
+    ```
+  </Tab>
+</Tabs>
+
+## Device Fingerprint (`fingerprintid`)
+
+The `fingerprintid` header is derived from stable device characteristics such as hardware identifiers and system properties. It takes the form of a timestamp in milliseconds followed by a dot-separated hex suffix.
+
+```text
+fingerprintid: 1784387336407.dba6a7
+```
+
+The fingerprint helps Stan detect anomalous session patterns and associate sessions with consistent device identities. In a real Android integration, derive this from a combination of stable device signals. For testing purposes you can use a static value.
+
+## Install Referrer (`installreferrer`)
+
+The `installreferrer` header carries the Google Play install attribution string for the device. This is the same UTM parameter string that Google Play passes to the app on first launch via the [Install Referrer API](https://developer.android.com/google/play/installreferrer).
+
+```text
+installreferrer: utm_source=google-play&utm_medium=organic
+```
+
+This value helps Stan attribute new user registrations to marketing campaigns. For integrations not originating from a Play Store install, use the organic fallback value shown above.
+
+## Google Advertising ID (`gaid`)
+
+The `gaid` header is the Google Advertising ID — a user-resettable UUID assigned by Google Play Services. It is used for attribution and analytics.
+
+```text
+gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4
+```
+
+<Warning>
+  Users can reset or opt out of the Google Advertising ID in their device settings. Your integration should handle cases where the GAID is unavailable and use a zeroed-out UUID (`00000000-0000-0000-0000-000000000000`) as a fallback.
+</Warning>
+
+## Putting It All Together
+
+The following example shows a complete OkHttp request in Kotlin with all platform headers attached.
+
+```kotlin
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.util.UUID
+import kotlin.random.Random
+
+fun buildStanRequest(jwt: String, url: String): Request {
+    val sid = "${System.currentTimeMillis()}-${Random.nextInt(10000, 99999)}"
+    val ts = System.currentTimeMillis().toString()
+
+    return Request.Builder()
+        .url(url)
+        .header("authorization", "Bearer $jwt")
+        .header("platform", "android")
+        .header("appversion", "253")
+        .header("stallionversion", "0")
+        .header("sid", sid)
+        .header("ts", ts)
+        .header("gaid", "9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4")
+        .header("appinstanceid", "76238ef97361a56425efb91beb0fdd57")
+        .header("fingerprintid", "1784387336407.dba6a7")
+        .header("countrycode", "in")
+        .header("installreferrer", "utm_source=google-play&utm_medium=organic")
+        .header("accept", "application/json, text/plain, */*")
+        .header("accept-encoding", "gzip")
+        .build()
+}
+
+val client = OkHttpClient()
+val request = buildStanRequest("<your-jwt>", "https://api.getstan.app/v1/profile")
+val response = client.newCall(request).execute()
+```

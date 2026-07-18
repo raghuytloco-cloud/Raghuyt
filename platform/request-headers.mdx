@@ -1,0 +1,91 @@
+---
+title: "Stan API Request Headers: Complete Reference"
+sidebarTitle: "Request Headers"
+description: "Full reference for every HTTP header required by the Stan API, including format, example values, and a complete curl request example."
+---
+
+Every request to the Stan API must include a specific set of HTTP headers that carry authentication credentials, session context, device identity, and standard HTTP metadata. This page documents each header, its format, and when to use it.
+
+## Authentication Headers
+
+These headers verify your identity on every request. The `authorization` header is required for all protected endpoints.
+
+| Header | Required | Type | Example | Description |
+|---|---|---|---|---|
+| `authorization` | ✅ Required | `string` | `Bearer eyJhbGci...` | JWT Bearer token obtained from the login endpoint. Prefix the token with `Bearer ` (note the trailing space). |
+
+<Warning>
+  Never expose your Bearer token in client-side code, logs, or version control. Tokens are scoped to the authenticated user and grant full account access.
+</Warning>
+
+## Session Headers
+
+Session headers establish a unique, traceable context for each user session. Generate `sid` and `ts` fresh for every new session; persist `appinstanceid` and `fingerprintid` across sessions.
+
+| Header | Required | Type | Example | Description |
+|---|---|---|---|---|
+| `sid` | ✅ Required | `string` | `1784387335639-45684` | Session ID composed of a Unix millisecond timestamp and a random integer joined by a hyphen (`<ms>-<random>`). Generate once per session. |
+| `ts` | ✅ Required | `string` | `1784387581188` | Current Unix timestamp in milliseconds at the time of the request. Update this value on every request. |
+| `appinstanceid` | ✅ Required | `string` (32-char hex) | `76238ef97361a56425efb91beb0fdd57` | Unique identifier for the app installation. Generate once at install time and reuse across all subsequent requests. |
+| `fingerprintid` | ✅ Required | `string` | `1784387336407.dba6a7` | Device fingerprint derived from stable hardware characteristics. Format: `<timestamp>.<hex-suffix>`. |
+
+<Note>
+  The `ts` value should reflect the real wall-clock time at the moment you send the request. A timestamp that is significantly skewed from the server time may cause requests to be rejected.
+</Note>
+
+## Device and Platform Headers
+
+These headers describe the device and app environment from which the request originates. The API uses them for feature gating, analytics, and attribution.
+
+| Header | Required | Type | Example | Description |
+|---|---|---|---|---|
+| `platform` | ✅ Required | `string` (enum) | `android` | Platform identifier. Always set to `android` for Stan API requests. |
+| `appversion` | ✅ Required | `string` (integer) | `253` | Stan app build number. Must match the current Stan app release. Current value: `253`. |
+| `stallionversion` | ✅ Required | `string` (integer) | `0` | Internal Stan infrastructure versioning field. Always set to `0` for standard requests. |
+| `gaid` | ✅ Required | `string` (UUID v4) | `9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4` | Google Advertising ID. A user-resettable UUID assigned by Google Play Services. Use `00000000-0000-0000-0000-000000000000` if unavailable. |
+| `countrycode` | ✅ Required | `string` (ISO 3166-1 alpha-2) | `in` | Two-letter country code for the user's locale. Stan is currently available in India (`in`). |
+| `installreferrer` | ✅ Required | `string` | `utm_source=google-play&utm_medium=organic` | Google Play install attribution string. Carries UTM parameters from the original app install. Use the organic fallback if the referrer is unavailable. |
+
+<Tip>
+  If you are building a server-side integration and do not have access to real device values for `gaid` or `installreferrer`, use the documented fallback values. Avoid sending empty strings, as these may trigger validation errors.
+</Tip>
+
+## HTTP Standard Headers
+
+These are standard HTTP headers that govern content negotiation, compression, and routing. Set them exactly as shown to match the behaviour of the Stan Android client.
+
+| Header | Required | Type | Example | Description |
+|---|---|---|---|---|
+| `host` | ✅ Required | `string` | `api.getstan.app` | Target host for the request. Most HTTP clients set this automatically. |
+| `accept` | ✅ Required | `string` | `application/json, text/plain, */*` | MIME types the client can accept. Match this value exactly to ensure the API returns JSON responses. |
+| `accept-encoding` | ✅ Required | `string` | `gzip` | Compression encoding the client supports. Setting `gzip` enables compressed responses and reduces bandwidth. |
+| `user-agent` | ✅ Required | `string` | `okhttp/4.12.0` | Identifies the HTTP client library. Stan uses OkHttp v4.12.0. |
+
+## Complete curl Example
+
+The following curl command shows all required headers in a single request. Replace `<your-jwt>` with a valid Bearer token from the login endpoint.
+
+```bash
+curl --http2 \
+  --request GET \
+  --url "https://api.getstan.app/v1/profile" \
+  --header "authorization: Bearer <your-jwt>" \
+  --header "platform: android" \
+  --header "appversion: 253" \
+  --header "stallionversion: 0" \
+  --header "sid: 1784387335639-45684" \
+  --header "ts: 1784387581188" \
+  --header "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
+  --header "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
+  --header "fingerprintid: 1784387336407.dba6a7" \
+  --header "countrycode: in" \
+  --header "installreferrer: utm_source=google-play&utm_medium=organic" \
+  --header "accept: application/json, text/plain, */*" \
+  --header "accept-encoding: gzip" \
+  --header "user-agent: okhttp/4.12.0" \
+  --header "host: api.getstan.app"
+```
+
+<Note>
+  The `sid` and `ts` values in this example are static for illustration purposes. In a real integration, generate a fresh `sid` per session and update `ts` to the current Unix millisecond timestamp on every request.
+</Note>

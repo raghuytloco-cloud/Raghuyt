@@ -1,0 +1,102 @@
+---
+title: "Link Your BGMI and Free Fire Game Accounts"
+sidebarTitle: "Link Game Accounts"
+description: "Connect your BGMI and Free Fire accounts to your Stan profile to unlock stats display, verified identity badges, and full community features."
+---
+
+Linking your in-game accounts to Stan ties your real gaming identity to your profile. Once linked, your BGMI and Free Fire stats become visible to the community, your profile earns a verified-player badge, and you unlock game-specific community features such as squad boards and leaderboards.
+
+## Why Link Your Game Accounts
+
+Connecting a game account to your Stan profile gives you:
+
+- **Stats display** — your in-game K/D ratio, rank, and season stats appear directly on your Stan profile card.
+- **Verified identity** — other players can confirm you are who you say you are by cross-referencing your in-game ID.
+- **Community features** — squad finder, game-specific rooms, and ranked leaderboards all require a verified game account.
+
+## Find Your Player ID
+
+Before you link an account, you need your numeric Player ID from the game itself.
+
+### BGMI Player ID
+
+1. Open **Battlegrounds Mobile India** on your device.
+2. Tap your **avatar / profile picture** in the top-left corner of the lobby.
+3. Your **Player ID** (a numeric string) appears beneath your in-game name on the profile screen.
+
+### Free Fire Player ID
+
+1. Open **Free Fire** on your device.
+2. Tap your **profile icon** in the top-left corner of the home screen.
+3. Your **UID** (numeric Player ID) is displayed just below your nickname.
+
+<Note>
+  Write your Player ID down before switching apps — you will need to enter it exactly in the Stan app during the linking step.
+</Note>
+
+## Link a Game Account in the Stan App
+
+<Steps>
+  <Step title="Open Settings">
+    Launch the **Stan** app and tap your profile avatar in the bottom navigation bar to open your profile. Then tap the **Settings** (gear) icon in the top-right corner.
+  </Step>
+  <Step title="Navigate to Game Accounts">
+    Scroll down to the **Linked Accounts** section and tap **Game Accounts**.
+  </Step>
+  <Step title="Choose the game to link">
+    Tap **Link BGMI** or **Link Free Fire**, depending on which account you want to connect.
+  </Step>
+  <Step title="Enter your in-game Player ID">
+    Type your numeric Player ID into the input field exactly as it appears in the game, then tap **Continue**.
+  </Step>
+  <Step title="Verify ownership">
+    Stan will prompt you to complete a short in-game verification step (such as setting a temporary in-game name token) to confirm you own the account. Follow the on-screen instructions, then tap **Verify**.
+  </Step>
+  <Step title="Confirm the link">
+    Once verification succeeds, tap **Save**. Your game account is now linked to your Stan profile.
+  </Step>
+</Steps>
+
+<Warning>
+  Only **one BGMI account** and **one Free Fire account** can be linked to a single Stan profile at a time. Linking a new account will replace any previously linked account for that game.
+</Warning>
+
+## What Changes After Linking
+
+After you successfully link a game account, two things happen automatically:
+
+1. **Your Stan profile** — the `bgmiProfileId` and/or `freefireProfileId` fields on your profile object become populated with your numeric in-game ID.
+2. **Your session JWT** — the token issued on your next login will include the linked profile IDs in its payload, so downstream integrations can read them without an extra API call.
+
+A linked profile response looks like this:
+
+```json
+{
+  "id": 32091378,
+  "username": "ItzDakshbro1",
+  "displayName": "Daksh",
+  "bgmiProfileId": 59704785,
+  "freefireProfileId": 59704786,
+  "countryCode": "in",
+  "avatarUrl": "https://cdn.getstan.app/avatars/32091378.jpg"
+}
+```
+
+When a game account is **not** linked, the corresponding field (`bgmiProfileId` or `freefireProfileId`) will be `null`.
+
+<Tip>
+  Verify that linking worked by fetching your own profile from the API and checking that the game profile ID fields are non-null:
+
+  ```bash
+  curl --http2 -X GET \
+    -H "authorization: Bearer <YOUR_TOKEN>" \
+    -H "accept: application/json" \
+    "https://api.getstan.app/api/v1/users?username=<YOUR_USERNAME>"
+  ```
+
+  If `bgmiProfileId` or `freefireProfileId` is populated in the response, the link is active.
+</Tip>
+
+## Unlinking a Game Account
+
+To remove a linked game account, return to **Settings → Game Accounts**, tap the linked account, and choose **Unlink**. The corresponding profile ID field will return to `null` on your next profile fetch.

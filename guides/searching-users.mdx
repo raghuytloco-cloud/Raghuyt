@@ -1,0 +1,175 @@
+---
+title: "Search for and Look Up Stan Users by Username"
+sidebarTitle: "Search Users"
+description: "Use the Stan API to find other players by their unique username handle and understand every field returned in the user profile response."
+---
+
+Every Stan user has a unique username handle they choose at registration — it is the primary key for discovery on the platform. The Stan API exposes a simple `GET` endpoint that lets you look up any public profile by username, making it easy to build integrations, bots, or community tools on top of Stan's user graph.
+
+## The User Lookup Endpoint
+
+```
+GET https://api.getstan.app/api/v1/users?username={username}
+```
+
+Pass the target username as a query parameter. The endpoint returns the full public profile object for that user if found.
+
+## Required Request Headers
+
+The Stan API requires several identifying headers on every request. These headers allow Stan to attribute traffic to a specific app installation, enforce platform policies, and authenticate the caller.
+
+| Header | Description |
+|---|---|
+| `authorization` | `Bearer <YOUR_TOKEN>` — your session JWT |
+| `accept` | `application/json, text/plain, */*` |
+| `gaid` | Google Advertising ID of the device |
+| `appversion` | Stan app version code (integer) |
+| `stallionversion` | Internal framework version (use `0` if unknown) |
+| `platform` | `android` or `ios` |
+| `sid` | Session ID assigned at login |
+| `ts` | Current Unix timestamp in milliseconds |
+| `appinstanceid` | Unique identifier for this app installation |
+| `installreferrer` | Play Store / App Store referrer string |
+| `countrycode` | Two-letter ISO country code (e.g. `in`) |
+| `fingerprintid` | Device fingerprint string |
+
+## Full Request Example
+
+<CodeGroup>
+```bash cURL
+curl --http2 -X GET \
+  -H "Host: api.getstan.app" \
+  -H "accept: application/json, text/plain, */*" \
+  -H "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
+  -H "appversion: 253" \
+  -H "stallionversion: 0" \
+  -H "platform: android" \
+  -H "sid: 1784387335639-45684" \
+  -H "ts: 1784387581188" \
+  -H "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
+  -H "installreferrer: utm_source=google-play&utm_medium=organic" \
+  -H "countrycode: in" \
+  -H "fingerprintid: 1784387336407.dba6a7" \
+  -H "authorization: Bearer <YOUR_TOKEN>" \
+  -H "accept-encoding: gzip" \
+  -H "user-agent: okhttp/4.12.0" \
+  "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
+```
+
+```python Python
+import requests
+
+url = "https://api.getstan.app/api/v1/users"
+params = {"username": "ItzDakshbro1"}
+headers = {
+    "accept": "application/json, text/plain, */*",
+    "gaid": "9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4",
+    "appversion": "253",
+    "stallionversion": "0",
+    "platform": "android",
+    "sid": "1784387335639-45684",
+    "ts": "1784387581188",
+    "appinstanceid": "76238ef97361a56425efb91beb0fdd57",
+    "installreferrer": "utm_source=google-play&utm_medium=organic",
+    "countrycode": "in",
+    "fingerprintid": "1784387336407.dba6a7",
+    "authorization": "Bearer <YOUR_TOKEN>",
+    "user-agent": "okhttp/4.12.0",
+}
+
+response = requests.get(url, params=params, headers=headers)
+print(response.json())
+```
+
+```javascript JavaScript (fetch)
+const params = new URLSearchParams({ username: "ItzDakshbro1" });
+
+const response = await fetch(
+  `https://api.getstan.app/api/v1/users?${params}`,
+  {
+    method: "GET",
+    headers: {
+      accept: "application/json, text/plain, */*",
+      gaid: "9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4",
+      appversion: "253",
+      stallionversion: "0",
+      platform: "android",
+      sid: "1784387335639-45684",
+      ts: String(Date.now()),
+      appinstanceid: "76238ef97361a56425efb91beb0fdd57",
+      installreferrer: "utm_source=google-play&utm_medium=organic",
+      countrycode: "in",
+      fingerprintid: "1784387336407.dba6a7",
+      authorization: "Bearer <YOUR_TOKEN>",
+    },
+  }
+);
+
+const user = await response.json();
+console.log(user);
+```
+</CodeGroup>
+
+## Successful Response
+
+A `200 OK` response returns a JSON object representing the user's public profile:
+
+```json
+{
+  "id": 32091378,
+  "username": "ItzDakshbro1",
+  "displayName": "Daksh",
+  "bgmiProfileId": 59704785,
+  "freefireProfileId": 59704786,
+  "countryCode": "in",
+  "avatarUrl": "https://cdn.getstan.app/avatars/32091378.jpg"
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | integer | Stan's internal numeric user ID. Stable and unique across the platform. |
+| `username` | string | The user's unique handle, as chosen at registration. Used for all username-based lookups. |
+| `displayName` | string | The user's chosen display name, shown on their profile card and in community views. May differ from `username`. |
+| `bgmiProfileId` | integer \| null | The numeric BGMI Player ID linked to this account. `null` if no BGMI account has been linked. |
+| `freefireProfileId` | integer \| null | The numeric Free Fire UID linked to this account. `null` if no Free Fire account has been linked. |
+| `countryCode` | string | Two-letter ISO 3166-1 alpha-2 country code set at registration (e.g. `in` for India). |
+| `avatarUrl` | string | Fully-qualified URL to the user's current profile picture hosted on Stan's CDN. |
+
+## Error Responses
+
+### 404 — User Not Found
+
+If no account exists for the given username, the API returns a `404 Not Found` response:
+
+```json
+{
+  "error": "user_not_found",
+  "message": "No user exists with the username 'ItzDakshbro1'."
+}
+```
+
+Check that you have spelled the username correctly and that the account has not been deleted or suspended.
+
+### 401 — Unauthorised
+
+If your token is missing, malformed, or expired, the API returns a `401 Unauthorized` response:
+
+```json
+{
+  "error": "unauthorized",
+  "message": "Invalid or expired authorization token."
+}
+```
+
+Re-authenticate through the Stan app or your auth flow to obtain a fresh JWT and retry the request.
+
+<Note>
+  Usernames on Stan are **case-sensitive**. `ItzDakshbro1` and `itzdakshbro1` are treated as different queries. Always use the exact casing of the username as it appears on the user's Stan profile.
+</Note>
+
+<Warning>
+  **Respect rate limits.** Avoid sending rapid sequential requests to the user lookup endpoint. Hammering the API in a tight loop risks having your token or IP throttled or blocked. Build in a delay of at least several hundred milliseconds between requests, and implement exponential back-off when you receive `429 Too Many Requests` responses.
+</Warning>

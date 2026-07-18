@@ -1,0 +1,93 @@
+---
+title: "Understanding Stan User Profiles and the Data Model"
+sidebarTitle: "Profiles"
+description: "Learn how Stan represents users — from unique identifiers and display names to avatar URLs, country codes, and linked game accounts."
+---
+
+Every person on Stan has a profile that acts as their identity across the platform. When you look up a user, join a community, or pull in-game statistics, you are always working against this central profile object. Understanding its fields helps you build features that feel native to the Stan ecosystem — whether that is rendering a player card, resolving a username to an internal ID, or checking which games a user has linked.
+
+## Profile fields
+
+A Stan profile contains the following top-level fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | integer | Globally unique numeric identifier for the Stan user |
+| `username` | string | Unique, human-readable handle (e.g. `ItzDakshbro1`) |
+| `displayName` | string | The name shown on the user's profile card |
+| `avatarUrl` | string | Absolute URL to the user's profile picture on the Stan CDN |
+| `countryCode` | string | ISO 3166-1 alpha-2 country code (e.g. `in` for India) |
+| `bgmiProfileId` | integer | Linked BGMI in-game player ID, if connected |
+| `freefireProfileId` | integer | Linked Free Fire in-game player ID, if connected |
+
+### Full profile object example
+
+The following is a representative profile response returned by the Stan API:
+
+```json
+{
+  "id": 32091378,
+  "username": "ItzDakshbro1",
+  "displayName": "Daksh",
+  "bgmiProfileId": 59704785,
+  "freefireProfileId": 59704786,
+  "countryCode": "in",
+  "avatarUrl": "https://cdn.getstan.app/avatars/32091378.jpg"
+}
+```
+
+You can fetch this object by username using the users endpoint:
+
+```http
+GET https://api.getstan.app/api/v1/users?username=ItzDakshbro1
+```
+
+## Username vs. profile ID
+
+Stan exposes two distinct ways to refer to a user. Knowing when to use each one prevents subtle bugs in your integration.
+
+<Tabs>
+  <Tab title="Username">
+    The `username` is the public-facing handle that a user chooses when they sign up. It is:
+
+    - **Human-readable** — safe to display in your UI exactly as returned
+    - **Unique** — no two active accounts share the same username
+    - **The primary discovery surface** — use it when accepting input from a person (search bars, @ mentions, deep links)
+
+    <Warning>
+      Usernames can be changed by the user. Never store a username as a long-lived foreign key in your own database. Always resolve it to a numeric `id` before persisting a relationship.
+    </Warning>
+  </Tab>
+  <Tab title="Numeric ID">
+    The `id` field is a stable, server-assigned integer that never changes for the lifetime of the account. It is:
+
+    - **Immutable** — safe to store as a permanent reference
+    - **Used internally** — appears in JWT tokens, CDN paths, and cross-service references
+    - **Not meaningful to end users** — do not expose raw numeric IDs in your UI unless you have a specific reason to
+
+    <Tip>
+      The numeric `id` is embedded directly in the user's avatar URL (`/avatars/{id}.jpg`), so you can derive the avatar path without an extra API call if you already have the ID.
+    </Tip>
+  </Tab>
+</Tabs>
+
+## Linked game accounts
+
+A profile can carry references to a user's in-game identities. The `bgmiProfileId` and `freefireProfileId` fields are integer player IDs that correspond to accounts in Battlegrounds Mobile India and Garena Free Fire respectively.
+
+<Note>
+  These game profile IDs are not always present. A user may have linked one game, both games, or neither. Always check for `null` or a missing field before attempting to fetch game-specific statistics.
+</Note>
+
+When both IDs are present, they also appear inside the authenticated JWT payload, so your backend can read them without making an additional API call after token verification.
+
+<CardGroup cols={2}>
+  <Card title="BGMI Account" icon="gamepad">
+    Identified by `bgmiProfileId`. Use this ID to query Battlegrounds Mobile India statistics and verify a player's in-game identity.
+  </Card>
+  <Card title="Free Fire Account" icon="fire">
+    Identified by `freefireProfileId`. Use this ID to query Garena Free Fire statistics and display rank or match history.
+  </Card>
+</CardGroup>
+
+For a deeper look at how game accounts are linked and what you can do with these IDs, see the [Game Accounts](/concepts/game-accounts) concept page.

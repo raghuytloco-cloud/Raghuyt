@@ -1,0 +1,152 @@
+---
+title: "Stan API Authentication: Bearer JWT Reference"
+sidebarTitle: "Authentication"
+description: "Learn how Stan API authentication works — JWT structure, token lifetime, how to pass your Bearer token, and how to handle 401 errors correctly."
+---
+
+The Stan API uses Bearer JWT authentication. Every request you make must carry a signed token in the `Authorization` header. The API validates the token on each call — no session cookies, no API keys. This page explains what the token contains, how long it lasts, and exactly how to pass it.
+
+## Authentication Scheme
+
+Stan uses the standard HTTP Bearer scheme. Place your JWT directly after the `Bearer` keyword, separated by a single space.
+
+<ParamField header="Authorization" type="string" required>
+  Your Stan JWT, prefixed with `Bearer `. The token is an HS256-signed JSON Web Token issued by the Stan platform.
+
+  **Format:** `Authorization: Bearer <token>`
+
+  **Example:**
+  ```http
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzIwOTEzNzgsImFwcFR5cGUiOiJzdGFuIiwiYmdtaVByb2ZpbGVJZCI6NTk3MDQ3ODUsImZyZWVmaXJlUHJvZmlsZUlkIjo1OTcwNDc4NiwiZXhwIjoxNzg1NDM0OTM1LCJpYXQiOjE3ODI4NDI5MzV9.<signature>
+  ```
+</ParamField>
+
+## Token Structure
+
+Stan JWTs are signed with the **HS256** algorithm. Once decoded, the payload contains the following claims:
+
+<ResponseField name="id" type="number" required>
+  The unique numeric identifier of the authenticated Stan user (e.g. `32091378`). Use this to correlate API responses back to a specific account.
+</ResponseField>
+
+<ResponseField name="appType" type="string" required>
+  Always `"stan"` for valid Stan tokens. If you receive a token where this field has any other value, treat it as invalid.
+</ResponseField>
+
+<ResponseField name="bgmiProfileId" type="number">
+  The user's linked Battlegrounds Mobile India (BGMI) profile ID, if connected (e.g. `59704785`).
+</ResponseField>
+
+<ResponseField name="freefireProfileId" type="number">
+  The user's linked Free Fire profile ID, if connected (e.g. `59704786`).
+</ResponseField>
+
+<ResponseField name="iat" type="number" required>
+  Issued-at timestamp as a Unix epoch (seconds). Indicates when the token was created.
+</ResponseField>
+
+<ResponseField name="exp" type="number" required>
+  Expiry timestamp as a Unix epoch (seconds). The API rejects any token presented after this time with a `401` error.
+</ResponseField>
+
+### Decoded Payload Example
+
+```json
+{
+  "id": 32091378,
+  "appType": "stan",
+  "bgmiProfileId": 59704785,
+  "freefireProfileId": 59704786,
+  "iat": 1782842935,
+  "exp": 1785434935
+}
+```
+
+## Token Lifetime
+
+Stan tokens are valid for approximately **30 days** from the `iat` (issued-at) timestamp. In the example above, the token was issued on `2025-04-30` and expires on `2025-05-29`.
+
+<Note>
+  You can calculate the remaining lifetime at any time with `exp - Math.floor(Date.now() / 1000)` (JavaScript) or `exp - int(time.time())` (Python). A negative result means the token has already expired.
+</Note>
+
+## Obtaining a Token
+
+Stan tokens are issued through the **Stan mobile app** (Android / iOS). Authenticate inside the app to receive a token, then extract it from the app's network traffic for use in your API calls.
+
+<Warning>
+  Never share your JWT or commit it to source control. Anyone who holds your token can act on your behalf until it expires.
+</Warning>
+
+## Passing the Token
+
+Include the token in the `Authorization` header of every request. The header is case-insensitive, but the `Bearer ` prefix (note the trailing space) is required.
+
+<CodeGroup>
+
+```bash cURL
+curl --http2 -X GET \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.<payload>.<signature>" \
+  -H "accept: application/json, text/plain, */*" \
+  -H "platform: android" \
+  -H "appversion: 253" \
+  "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch(
+  "https://api.getstan.app/api/v1/users?username=ItzDakshbro1",
+  {
+    method: "GET",
+    headers: {
+      "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.<payload>.<signature>",
+      "Accept": "application/json",
+      "Platform": "android",
+      "AppVersion": "253",
+    },
+  }
+);
+const data = await response.json();
+```
+
+```python Python (requests)
+import requests
+
+headers = {
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.<payload>.<signature>",
+    "Accept": "application/json",
+    "Platform": "android",
+    "AppVersion": "253",
+}
+
+response = requests.get(
+    "https://api.getstan.app/api/v1/users",
+    params={"username": "ItzDakshbro1"},
+    headers=headers,
+)
+data = response.json()
+```
+
+</CodeGroup>
+
+## Authentication Errors
+
+When authentication fails, the API returns a `401 Unauthorized` response. The three most common causes are a missing token, an expired token, and a malformed token.
+
+```json
+{
+  "statusCode": 401,
+  "message": "Unauthorized",
+  "error": "Unauthorized"
+}
+```
+
+| Scenario                         | HTTP Status | How to resolve                                              |
+|----------------------------------|-------------|-------------------------------------------------------------|
+| No `Authorization` header sent   | `401`       | Add the `Authorization: Bearer <token>` header.             |
+| Token has passed its `exp` time  | `401`       | Re-authenticate via the Stan app to obtain a fresh token.   |
+| Token is malformed or corrupted  | `401`       | Verify the full token string was copied without truncation. |
+
+<Tip>
+  Check the `exp` claim of your token before sending requests in long-running scripts. Proactively refreshing the token before it expires avoids mid-session `401` failures.
+</Tip>

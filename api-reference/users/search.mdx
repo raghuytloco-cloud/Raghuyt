@@ -1,0 +1,81 @@
+---
+title: "Search Users on Stan — API Reference Guide"
+sidebarTitle: "Search Users"
+description: "Look up Stan users by exact username. Learn how username-based search works, handle not-found responses, and understand current search limitations."
+---
+
+Stan's primary user discovery mechanism is exact username lookup via the `GET /api/v1/users` endpoint. You supply a `username` query parameter and Stan returns the matching profile in a single response — there is no separate search endpoint.
+
+## How Username Search Works
+
+Lookups are matched against the username field exactly as you provide it. The match is **case-sensitive**, so `ItzDakshbro1` and `itzdakshbro1` are treated as two different queries. You must know the user's precise username before making a request.
+
+<Tip>
+  If a user tells you their handle verbally or you copy it from a profile screenshot, double-check capitalisation before sending the request. A single mismatched letter will produce a `404` response.
+</Tip>
+
+Bulk lookups and wildcard/partial-string searches are **not supported**. You can look up one user per request using their full, exact username.
+
+## Request
+
+**`GET https://api.getstan.app/api/v1/users`**
+
+<ParamField query="username" type="string" required>
+  The exact, case-sensitive username of the Stan account to retrieve. Partial matches and wildcards are not accepted.
+</ParamField>
+
+```bash
+curl --http2 -X GET \
+  -H "Host: api.getstan.app" \
+  -H "accept: application/json, text/plain, */*" \
+  -H "gaid: 9bbb0f02-5c2c-4a3b-8083-1fa26eeaedf4" \
+  -H "appversion: 253" \
+  -H "stallionversion: 0" \
+  -H "platform: android" \
+  -H "sid: 1784387335639-45684" \
+  -H "ts: 1784387581188" \
+  -H "appinstanceid: 76238ef97361a56425efb91beb0fdd57" \
+  -H "installreferrer: utm_source=google-play&utm_medium=organic" \
+  -H "countrycode: in" \
+  -H "fingerprintid: 1784387336407.dba6a7" \
+  -H "authorization: Bearer <YOUR_TOKEN>" \
+  -H "accept-encoding: gzip" \
+  -H "user-agent: okhttp/4.12.0" \
+  "https://api.getstan.app/api/v1/users?username=ItzDakshbro1"
+```
+
+## Successful Response
+
+When the username matches an existing account, the API returns `200 OK` with the user's profile object.
+
+```json
+{
+  "id": 32091378,
+  "username": "ItzDakshbro1",
+  "displayName": "Daksh",
+  "bgmiProfileId": 59704785,
+  "freefireProfileId": 59704786,
+  "countryCode": "in",
+  "avatarUrl": "https://cdn.getstan.app/avatars/32091378.jpg"
+}
+```
+
+See [GET /users](/api-reference/users/get-user) for a full description of every response field.
+
+## Handling a Not Found Response
+
+When no account matches the username you provided, the API returns `404 Not Found`. This is the expected response for any username that does not exist on Stan — it does not indicate an API error on your side.
+
+```json
+{
+  "statusCode": 404,
+  "message": "User not found",
+  "error": "Not Found"
+}
+```
+
+When you receive a `404`, check the following before retrying:
+
+- **Case** — confirm the username uses the exact mix of upper and lower case letters.
+- **Spelling** — look for transposed or missing characters, especially in stylised names (for example, `Itz` vs `Its`).
+- **Account existence** — the account may have been deleted or may never have existed under that username.
